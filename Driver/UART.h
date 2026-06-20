@@ -11,7 +11,7 @@
 typedef enum {
 	CMD_NONE, CMD_SPD, CMD_LR, CMD_STOP, CMD_QUERY,
 	CMD_KP, CMD_KI, CMD_KD, CMD_TGT, CMD_OL,   /* OL=开环测试 */
-	CMD_FFL, CMD_FFR                              /* 前馈系数 */
+	CMD_FFL, CMD_FFR, CMD_FFO                       /* 前馈系数 + 死区偏移 */
 } CmdType_t;
 
 typedef struct {

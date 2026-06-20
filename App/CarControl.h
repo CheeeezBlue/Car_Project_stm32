@@ -23,8 +23,10 @@ void Car_SetPID(float kp, float ki, float kd);
 
 /* ---- 前馈系数 ---- */
 void  Car_SetFF(float l, float r);
+void  Car_SetFFOffset(float offset);
 float Car_GetFF_L(void);
 float Car_GetFF_R(void);
+float Car_GetFFOffset(void);
 
 /* ---- 状态查询（OLED用） ---- */
 s16   Car_GetEnc(u8 motor);       /* 0=左, 1=右 */

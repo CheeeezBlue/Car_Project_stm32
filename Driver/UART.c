@@ -241,5 +241,8 @@ void UART_ParseCmd(const char* line, UART_Cmd_t* cmd)
 	} else if (strncmp(line, "FFR:", 4) == 0) {
 		cmd->type = CMD_FFR;
 		cmd->value = (s16)atoi(line + 4);
+	} else if (strncmp(line, "FFO:", 4) == 0) {
+		cmd->type = CMD_FFO;
+		cmd->value = (s16)atoi(line + 4);
 	}
 }

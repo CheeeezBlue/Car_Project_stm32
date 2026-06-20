@@ -82,6 +82,12 @@ void Command_Handle(const char* line)
 		UART_Printf("FF_R=%.3f\r\n", v);
 		break;
 	}
+	case CMD_FFO: {
+		float v = cmd.value / 1000.0f;
+		Car_SetFFOffset(v);
+		UART_Printf("FF_Offset=%.1f\r\n", v);
+		break;
+	}
 
 	default:
 		break;
