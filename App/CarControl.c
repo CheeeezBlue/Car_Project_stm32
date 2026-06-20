@@ -23,8 +23,8 @@ static s8     open_loop_pwm;      /* 开环PWM值 */
    ================================================================ */
 void CarControl_Init(void)
 {
-	PID_Init(&pid_L, 1.0f, 0.0f, 0.0f, -30.0f, 30.0f);
-	PID_Init(&pid_R, 1.0f, 0.0f, 0.0f, -30.0f, 30.0f);
+	PID_Init(&pid_L, 1.5f, 2.0f, 0.03f, -30.0f, 30.0f);
+	PID_Init(&pid_R, 1.5f, 2.0f, 0.03f, -30.0f, 30.0f);
 	Speed_L   = 0;
 	Speed_R   = 0;
 	pid_target_L = 0.0f;
