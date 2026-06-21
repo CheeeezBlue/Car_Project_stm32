@@ -18,8 +18,6 @@ int main(void)
 	UART_EnableIRQ(UART_ID_1);
 	CarControl_Init();
 
-	UART_Printf("Car Ready.\r\n");
-
 	u16 v_tick = 0;
 
 	while (1)
