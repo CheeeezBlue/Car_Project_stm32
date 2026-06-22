@@ -1,5 +1,6 @@
 #include "Command.h"
 #include "CarControl.h"
+#include "YawControl.h"
 #include "../Driver/UART.h"
 #include "../Hardware/Motor.h"
 
@@ -30,6 +31,7 @@ void Command_Handle(const char* line)
 
 	case CMD_STOP:
 		Car_Stop();
+		YawControl_Disable();
 		UART_Printf("STOP\r\n");
 		break;
 
@@ -44,20 +46,20 @@ void Command_Handle(const char* line)
 
 	case CMD_KP: {
 		float v = cmd.value / 1000.0f;
-		Car_SetPID(v, Car_GetKi(), Car_GetKd());
-		UART_Printf("Kp=%.3f\r\n", v);
+		Car_SetKp(v);
+		UART_Printf("Vel Kp=%.3f\r\n", v);
 		break;
 	}
 	case CMD_KI: {
 		float v = cmd.value / 1000.0f;
-		Car_SetPID(Car_GetKp(), v, Car_GetKd());
-		UART_Printf("Ki=%.3f\r\n", v);
+		Car_SetKi(v);
+		UART_Printf("Vel Ki=%.3f\r\n", v);
 		break;
 	}
 	case CMD_KD: {
 		float v = cmd.value / 1000.0f;
-		Car_SetPID(Car_GetKp(), Car_GetKi(), v);
-		UART_Printf("Kd=%.3f\r\n", v);
+		Car_SetKd(v);
+		UART_Printf("Vel Kd=%.3f\r\n", v);
 		break;
 	}
 	case CMD_TGT:
@@ -86,6 +88,40 @@ void Command_Handle(const char* line)
 		float v = cmd.value / 1000.0f;
 		Car_SetFFOffset(v);
 		UART_Printf("FF_Offset=%.1f\r\n", v);
+		break;
+	}
+
+	case CMD_YAW:
+		YawControl_SetTarget((float)cmd.value);
+		YawControl_Enable();
+		UART_Printf("Yaw TGT: %d deg/s\r\n", cmd.value);
+		break;
+	case CMD_YAWOFF:
+		YawControl_Disable();
+		UART_Printf("Yaw OFF\r\n");
+		break;
+	case CMD_YWP: {
+		float v = cmd.value / 1000.0f;
+		YawControl_SetKp(v);
+		UART_Printf("Yaw Kp=%.3f\r\n", v);
+		break;
+	}
+	case CMD_YWI: {
+		float v = cmd.value / 1000.0f;
+		YawControl_SetKi(v);
+		UART_Printf("Yaw Ki=%.3f\r\n", v);
+		break;
+	}
+	case CMD_YWD: {
+		float v = cmd.value / 1000.0f;
+		YawControl_SetKd(v);
+		UART_Printf("Yaw Kd=%.3f\r\n", v);
+		break;
+	}
+	case CMD_YWM: {
+		float v = cmd.value / 1000.0f;
+		YawControl_SetLimit(v);
+		UART_Printf("Yaw MaxDiff=%.1f\r\n", v);
 		break;
 	}
 

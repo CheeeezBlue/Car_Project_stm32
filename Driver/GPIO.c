@@ -117,23 +117,19 @@ void GPIO_InitAll(void)
 	GPIO_InitPin(GPIO_PB, 10, GPIO_OUT_PP);  /* Trig */
 	GPIO_InitPin(GPIO_PA, 15, GPIO_IN_FLOAT); /* Echo */
 
-	/* --- 舵机 --- */
-	GPIO_InitPin(GPIO_PA, 2, GPIO_OUT_PP);
-
 	/* --- OLED I2C (SCL→PB8, SDA→PB9, 与OLED.c一致) --- */
 	GPIO_InitPin(GPIO_PB, 8, GPIO_OUT_OD);
 	GPIO_InitPin(GPIO_PB, 9, GPIO_OUT_OD);
-	/* PB11 被按键(SPEED_DOWN)复用，此处由 Key_Init() 配置 */
 
-	/* --- 蓝牙 UART --- */
+	/* --- 调试 UART1 (PC有线) + 蓝牙 UART2 (HC05无线) --- */
 	GPIO_InitPin(GPIO_PA,  9, GPIO_AF_PP);    /* USART1 TX */
 	GPIO_InitPin(GPIO_PA, 10, GPIO_IN_FLOAT); /* USART1 RX */
+	GPIO_InitPin(GPIO_PA,  2, GPIO_AF_PP);    /* USART2 TX → HC05 RX */
+	GPIO_InitPin(GPIO_PA,  3, GPIO_IN_FLOAT); /* USART2 RX ← HC05 TX */
 
 	/* --- MPU6050 I2C (软件模拟) --- */
 	GPIO_InitPin(GPIO_PA, 11, GPIO_OUT_OD);   /* I2C SCL */
 	GPIO_InitPin(GPIO_PA, 12, GPIO_OUT_OD);   /* I2C SDA */
-
-	/* --- 按键 (A3=SPEED_UP, B11=SPEED_DOWN, 由 Key_Init() 配置) --- */
 
 	/* --- 板载LED --- */
 	GPIO_InitPin(GPIO_PC, 13, GPIO_OUT_PP);

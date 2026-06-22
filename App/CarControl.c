@@ -11,8 +11,8 @@ static u8     pid_direct;         /* 1=直接脉冲目标(TGT), 0=Speed%换算 *
 static s8     Speed_L, Speed_R;
 static s16    Enc_L, Enc_R;       /* 原始增量（VOFA+/OLED 显示用） */
 static float  enc_filt_L, enc_filt_R; /* IIR 滤波后的速度（PID 用） */
-static float  ff_coeff_L = 0.856f;   /* 左轮前馈系数: base_PWM = target × coeff */
-static float  ff_coeff_R = 0.798f;   /* 右轮前馈系数 */
+static float  ff_coeff_L = 0.800f;   /* 左轮前馈系数: base_PWM = target × coeff */
+static float  ff_coeff_R = 0.754f;   /* 右轮前馈系数 */
 static float  ff_offset  = 5.0f;     /* 死区补偿偏移量 (PWM%) */
 static float  tgt_prev_L, tgt_prev_R; /* 上周期目标，检测突变用 */
 static u8     open_loop;          /* 1=开环测试模式，固定PWM */
@@ -26,8 +26,8 @@ static u8     brake_timer;        /* 硬刹车剩余周期 */
    ================================================================ */
 void CarControl_Init(void)
 {
-	PID_Init(&pid_L, 0.5f, 0.5f, 0.075f, -30.0f, 30.0f);
-	PID_Init(&pid_R, 0.5f, 0.5f, 0.075f, -30.0f, 30.0f);
+	PID_Init(&pid_L, 0.5f, 0.5f, 0.07f, -30.0f, 30.0f);
+	PID_Init(&pid_R, 0.5f, 0.5f, 0.07f, -30.0f, 30.0f);
 	Speed_L   = 0;
 	Speed_R   = 0;
 	pid_target_L = 0.0f;
@@ -157,12 +157,33 @@ void Car_SetTarget(s8 target)
 	pid_direct = 1;
 }
 
+void Car_SetLRPulse(float L, float R)
+{
+	pid_target_L = L;
+	pid_target_R = R;
+	pid_direct = 1;
+}
+
+void Car_ApplyYawDiff(float diff)
+{
+	float base = (pid_target_L + pid_target_R) / 2.0f;
+	pid_target_L = base - diff / 2.0f;
+	pid_target_R = base + diff / 2.0f;
+	pid_direct = 1;
+}
+
+s8 Car_GetSpeed(u8 motor) { return motor ? Speed_R : Speed_L; }
+
 void Car_SetPID(float kp, float ki, float kd)
 {
 	pid_L.Kp = pid_R.Kp = kp;
 	pid_L.Ki = pid_R.Ki = ki;
 	pid_L.Kd = pid_R.Kd = kd;
 }
+
+void Car_SetKp(float kp) { pid_L.Kp = pid_R.Kp = kp; }
+void Car_SetKi(float ki) { pid_L.Ki = pid_R.Ki = ki; }
+void Car_SetKd(float kd) { pid_L.Kd = pid_R.Kd = kd; }
 
 void Car_SetFF(float l, float r)
 {

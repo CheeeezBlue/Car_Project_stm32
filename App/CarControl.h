@@ -14,12 +14,18 @@ void Car_SetL(s8 left);
 void Car_SetR(s8 right);
 void Car_Stop(void);
 void Car_SetTarget(s8 target);
+void Car_SetLRPulse(float L, float R);      /* yaw 环用：独立设置左右脉冲目标 */
+void Car_ApplyYawDiff(float diff); /* yaw 环用：当前 pid_target 均值 ± diff/2 */
+s8   Car_GetSpeed(u8 motor);               /* 0=左, 1=右：当前 Speed% */
 
 /* ---- 开环测试（临时：直驱PWM，编码器照常采样） ---- */
 void Car_OpenLoop(s8 pwm);
 
 /* ---- PID参数 ---- */
 void Car_SetPID(float kp, float ki, float kd);
+void Car_SetKp(float kp);
+void Car_SetKi(float ki);
+void Car_SetKd(float kd);
 
 /* ---- 前馈系数 ---- */
 void  Car_SetFF(float l, float r);

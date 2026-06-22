@@ -11,7 +11,9 @@
 typedef enum {
 	CMD_NONE, CMD_SPD, CMD_LR, CMD_STOP, CMD_QUERY,
 	CMD_KP, CMD_KI, CMD_KD, CMD_TGT, CMD_OL,   /* OL=开环测试 */
-	CMD_FFL, CMD_FFR, CMD_FFO                       /* 前馈系数 + 死区偏移 */
+	CMD_FFL, CMD_FFR, CMD_FFO,                      /* 前馈系数 + 死区偏移 */
+	CMD_YAW, CMD_YAWOFF,                             /* yaw 目标 + 关闭 */
+	CMD_YWP, CMD_YWI, CMD_YWD, CMD_YWM               /* yaw PID + 限幅 */
 } CmdType_t;
 
 typedef struct {
@@ -30,6 +32,7 @@ void UART_SendByte(UART_ID_t uart_id, u8 data);
 void UART_SendString(UART_ID_t uart_id, const char* str);
 void UART_SendBuf(UART_ID_t uart_id, const u8* buf, u16 len);
 void UART_Printf(const char* fmt, ...);
+void UART_PrintfAll(const char* fmt, ...);    /* 同时发送到 USART1 + USART2 */
 
 /* --- 非阻塞接收（中断 + 环形缓冲区） --- */
 u8   UART_ReadByte(UART_ID_t uart_id);          /* 读一个字节，无数据返回0 */

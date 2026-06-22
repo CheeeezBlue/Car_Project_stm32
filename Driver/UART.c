@@ -110,6 +110,17 @@ void UART_Printf(const char* fmt, ...)
 	UART_SendString(UART_ID_1, buf);
 }
 
+void UART_PrintfAll(const char* fmt, ...)
+{
+	char buf[128];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+	UART_SendString(UART_ID_1, buf);
+	UART_SendString(UART_ID_2, buf);
+}
+
 /* ================================================================
    非阻塞接收
    ================================================================ */
@@ -243,6 +254,23 @@ void UART_ParseCmd(const char* line, UART_Cmd_t* cmd)
 		cmd->value = (s16)atoi(line + 4);
 	} else if (strncmp(line, "FFO:", 4) == 0) {
 		cmd->type = CMD_FFO;
+		cmd->value = (s16)atoi(line + 4);
+	} else if (strncmp(line, "YAWP:", 5) == 0) {
+		cmd->type = CMD_YWP;
+		cmd->value = (s16)atoi(line + 5);
+	} else if (strncmp(line, "YAWI:", 5) == 0) {
+		cmd->type = CMD_YWI;
+		cmd->value = (s16)atoi(line + 5);
+	} else if (strncmp(line, "YAWD:", 5) == 0) {
+		cmd->type = CMD_YWD;
+		cmd->value = (s16)atoi(line + 5);
+	} else if (strncmp(line, "YAWM:", 5) == 0) {
+		cmd->type = CMD_YWM;
+		cmd->value = (s16)atoi(line + 5);
+	} else if (strncmp(line, "YAW:OFF", 7) == 0) {
+		cmd->type = CMD_YAWOFF;
+	} else if (strncmp(line, "YAW:", 4) == 0) {
+		cmd->type = CMD_YAW;
 		cmd->value = (s16)atoi(line + 4);
 	}
 }
