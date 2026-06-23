@@ -730,6 +730,16 @@
               <FileType>5</FileType>
               <FilePath>.\Hardware\MPU6050.h</FilePath>
             </File>
+            <File>
+              <FileName>VL53L0X.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\VL53L0X.c</FilePath>
+            </File>
+            <File>
+              <FileName>VL53L0X.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\VL53L0X.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

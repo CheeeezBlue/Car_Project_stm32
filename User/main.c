@@ -9,6 +9,7 @@
 #include "../App/Command.h"
 #include "../App/YawControl.h"
 #include "../Hardware/MPU6050.h"
+#include "../Hardware/VL53L0X.h"
 
 int main(void)
 {
@@ -20,22 +21,13 @@ int main(void)
 	UART_EnableIRQ(UART_ID_1);
 	UART_Init(UART_ID_2, 115200);
 	UART_EnableIRQ(UART_ID_2);
+	VL53L0X_Init();
 	CarControl_Init();
 
-	/* MPU6050 初始化 + 零偏校准 */
 	MPU6050_Init();
 	Delay_ms(100);
-	if (MPU6050_Check())
-		UART_PrintfAll("# MPU6050 OK\r\n");
-	else
-		UART_PrintfAll("# MPU6050 FAIL\r\n");
-
 	MPU6050_CalibrateGyroZ(300);
-	UART_PrintfAll("# Gyro Bias: %.3f deg/s\r\n", MPU6050_GetGyroZBias());
-
 	YawControl_Init();
-
-	UART_PrintfAll("# Car Ready.\r\n");
 
 	u16 v_tick = 0;
 	u8  yaw_was_enabled = 0;
@@ -50,6 +42,9 @@ int main(void)
 		if (UART_GetLine(UART_ID_2, line, sizeof(line))) {
 			Command_Handle(line);
 		}
+
+		/* VL53L0X 激光测距：从 USART3 环形缓冲区读取并解析 */
+		VL53L0X_Update();
 
 		/* Yaw 控制：读取陀螺仪 → PID → 差分应用到左右轮 */
 		if (YawControl_IsEnabled()) {
@@ -73,7 +68,8 @@ int main(void)
 			v_tick = 0;
 			UART_PrintfAll("%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\r\n",
 			            Car_GetDisplayTarget(0), Car_GetDisplayTarget(1),
-			            Car_GetFiltSpeed(0),    Car_GetFiltSpeed(1),
+			            Car_GetFiltSpeed(0),   
+						Car_GetFiltSpeed(1),
 			            YawControl_GetTarget(),  YawControl_GetLastRate(),
 			            YawControl_GetDiff(),    YawControl_GetOutput());
 		}

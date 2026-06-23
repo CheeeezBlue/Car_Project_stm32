@@ -157,6 +157,11 @@ void USART2_IRQHandler(void)
 	UART_RxISR(UART_ID_2);
 }
 
+void USART3_IRQHandler(void)
+{
+	UART_RxISR(UART_ID_3);
+}
+
 /**
   * @}
   */ 

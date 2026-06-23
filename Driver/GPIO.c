@@ -113,19 +113,20 @@ void GPIO_InitAll(void)
 	GPIO_InitPin(GPIO_PB, 6, GPIO_IN_FLOAT); /* EncB E2A    */
 	GPIO_InitPin(GPIO_PB, 7, GPIO_IN_FLOAT); /* EncB E2B    */
 
-	/* --- 超声波模块 (Trig→PB10, Echo→PA15) --- */
-	GPIO_InitPin(GPIO_PB, 10, GPIO_OUT_PP);  /* Trig */
+	/* --- 超声波模块 (Echo→PA15, Trig→PB6 由Timer.c直接操作) --- */
 	GPIO_InitPin(GPIO_PA, 15, GPIO_IN_FLOAT); /* Echo */
 
 	/* --- OLED I2C (SCL→PB8, SDA→PB9, 与OLED.c一致) --- */
 	GPIO_InitPin(GPIO_PB, 8, GPIO_OUT_OD);
 	GPIO_InitPin(GPIO_PB, 9, GPIO_OUT_OD);
 
-	/* --- 调试 UART1 (PC有线) + 蓝牙 UART2 (HC05无线) --- */
+	/* --- 调试 UART1 (PC有线) + 蓝牙 UART2 (HC05无线) + 激光 UART3 (VL53L0X) --- */
 	GPIO_InitPin(GPIO_PA,  9, GPIO_AF_PP);    /* USART1 TX */
 	GPIO_InitPin(GPIO_PA, 10, GPIO_IN_FLOAT); /* USART1 RX */
 	GPIO_InitPin(GPIO_PA,  2, GPIO_AF_PP);    /* USART2 TX → HC05 RX */
 	GPIO_InitPin(GPIO_PA,  3, GPIO_IN_FLOAT); /* USART2 RX ← HC05 TX */
+	GPIO_InitPin(GPIO_PB, 10, GPIO_AF_PP);    /* USART3 TX */
+	GPIO_InitPin(GPIO_PB, 11, GPIO_IN_FLOAT); /* USART3 RX ← VL53L0X TX */
 
 	/* --- MPU6050 I2C (软件模拟) --- */
 	GPIO_InitPin(GPIO_PA, 11, GPIO_OUT_OD);   /* I2C SCL */
