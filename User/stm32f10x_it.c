@@ -144,9 +144,6 @@ void SysTick_Handler(void)
 /*  file (startup_stm32f10x_xx.s).                                            */
 /******************************************************************************/
 
-/**
-  * @brief  USART1 接收中断 — 字节写入环形缓冲区
-  */
 void USART1_IRQHandler(void)
 {
 	UART_RxISR(UART_ID_1);

@@ -107,18 +107,8 @@ void UART_Printf(const char* fmt, ...)
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
-	UART_SendString(UART_ID_1, buf);
-}
-
-void UART_PrintfAll(const char* fmt, ...)
-{
-	char buf[128];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, args);
-	va_end(args);
-	UART_SendString(UART_ID_1, buf);
-	UART_SendString(UART_ID_2, buf);
+	UART_SendString(UART_ID_1, buf);      /* CH340 USB (USART1) */
+	UART_SendString(UART_ID_3, buf);      /* 蓝牙 (USART3)   */
 }
 
 /* ================================================================
@@ -272,5 +262,29 @@ void UART_ParseCmd(const char* line, UART_Cmd_t* cmd)
 	} else if (strncmp(line, "YAW:", 4) == 0) {
 		cmd->type = CMD_YAW;
 		cmd->value = (s16)atoi(line + 4);
+	} else if (strncmp(line, "LINE:OFF", 8) == 0) {
+		cmd->type = CMD_LINEOFF;
+		} else if (strncmp(line, "LINE:ON", 7) == 0 || strncmp(line, "LINE", 4) == 0) {
+		cmd->type = CMD_LINE;
+		} else if (strncmp(line, "LSPD:", 5) == 0) {
+		cmd->type = CMD_LSPD;
+		cmd->value = (s16)atoi(line + 5);
+		} else if (strncmp(line, "LKP:", 4) == 0) {
+		cmd->type = CMD_LKP;
+		cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "LKI:", 4) == 0) {
+		cmd->type = CMD_LKI;
+		cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "LKD:", 4) == 0) {
+		cmd->type = CMD_LKD;
+		cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "KEY1", 4) == 0) {
+			cmd->type = CMD_KEY1;
+		} else if (strncmp(line, "KEY2", 4) == 0) {
+			cmd->type = CMD_KEY2;
+		} else if (strncmp(line, "KEY3", 4) == 0) {
+			cmd->type = CMD_KEY3;
+		} else if (strncmp(line, "KEY4", 4) == 0) {
+			cmd->type = CMD_KEY4;
+		}
 	}
-}

@@ -164,7 +164,7 @@ void OLED_I2C_Init(void)
   * @param  String 要显示的字符串，范围：ASCII可见字符
   * @retval 无
     */
-    void OLED_ShowString(uint8_t Line, uint8_t Column, char *String)
+    void OLED_ShowString(uint8_t Line, uint8_t Column, const char *String)
     {
     uint8_t i;
     for (i = 0; String[i] != '\0'; i++)

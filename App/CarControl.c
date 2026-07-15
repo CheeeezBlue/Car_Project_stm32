@@ -26,8 +26,8 @@ static u8     brake_timer;        /* 硬刹车剩余周期 */
    ================================================================ */
 void CarControl_Init(void)
 {
-	PID_Init(&pid_L, 0.5f, 0.5f, 0.07f, -30.0f, 30.0f);
-	PID_Init(&pid_R, 0.5f, 0.5f, 0.07f, -30.0f, 30.0f);
+	PID_Init(&pid_L, 0.5f, 0.5f, 0.07f, -100.0f, 100.0f);
+	PID_Init(&pid_R, 0.5f, 0.5f, 0.07f, -100.0f, 100.0f);
 	Speed_L   = 0;
 	Speed_R   = 0;
 	pid_target_L = 0.0f;
@@ -52,10 +52,10 @@ void CarControl_Update(void)
 	float spd_L = Encoder_Update(ENC_LEFT,  &raw_L);
 	float spd_R = Encoder_Update(ENC_RIGHT, &raw_R);
 
-	/* 左轮编码器相位校正（A/B 交叉） */
-	spd_L = -spd_L;
-	Enc_L = -raw_L;
-	Enc_R =  raw_R;
+	/* 右轮编码器相位校正（IN1/IN2调换后需翻转） */
+	spd_R = -spd_R;
+	Enc_L = raw_L;
+	Enc_R = -raw_R;
 
 	/* 2. IIR 低通滤波 → PID 反馈（不污染 VOFA+/OLED 原始值） */
 	enc_filt_L += ENC_FILT_ALPHA * (spd_L - enc_filt_L);
@@ -91,6 +91,8 @@ void CarControl_Update(void)
 		Motor_SetSpeed(MOTOR_LEFT,  open_loop_pwm);
 		Motor_SetSpeed(MOTOR_RIGHT, open_loop_pwm);
 	} else {
+#if 1
+		/* 前馈：线性模型 (base_PWM = target * coeff) + 死区补偿 */
 		float base_L = pid_target_L * ff_coeff_L;
 		float base_R = pid_target_R * ff_coeff_R;
 		/* 死区补偿：误差线性渐出。|error|>2 全额，0.5~2 线性衰减，<0.5 退出 */
@@ -108,6 +110,13 @@ void CarControl_Update(void)
 		float pid_R_out = PID_Compute(&pid_R, pid_target_R, enc_filt_R, 0.01f);
 		float out_L = base_L + pid_L_out;
 		float out_R = base_R + pid_R_out;
+#endif
+#if 0
+		/* PID 控制（无前馈） */
+		float out_L = PID_Compute(&pid_L, pid_target_L, enc_filt_L, 0.01f);
+		float out_R = PID_Compute(&pid_R, pid_target_R, enc_filt_R, 0.01f);
+#endif
+		/* 输出限幅 */
 		if (out_L >  100.0f) out_L =  100.0f;
 		if (out_L < -100.0f) out_L = -100.0f;
 		if (out_R >  100.0f) out_R =  100.0f;
@@ -117,9 +126,7 @@ void CarControl_Update(void)
 	}
 }
 
-/* ================================================================
-   命令接口
-   ================================================================ */
+/* 命令接口 */
 void Car_SetL(s8 left)
 {
 	Speed_L = left;

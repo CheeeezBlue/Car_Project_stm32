@@ -740,6 +740,26 @@
               <FileType>5</FileType>
               <FilePath>.\Hardware\VL53L0X.h</FilePath>
             </File>
+            <File>
+              <FileName>Grayscale.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\Grayscale.c</FilePath>
+            </File>
+            <File>
+              <FileName>Grayscale_.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\Grayscale_.h</FilePath>
+            </File>
+            <File>
+              <FileName>Menu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\Menu.c</FilePath>
+            </File>
+            <File>
+              <FileName>Menu.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\Menu.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -909,6 +929,26 @@
               <FileName>YawControl.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\App\YawControl.h</FilePath>
+            </File>
+            <File>
+              <FileName>RunMode.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\App\RunMode.c</FilePath>
+            </File>
+            <File>
+              <FileName>RunMode.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\App\RunMode.h</FilePath>
+            </File>
+            <File>
+              <FileName>LineControl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\App\LineControl.c</FilePath>
+            </File>
+            <File>
+              <FileName>LineControl.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\App\LineControl.h</FilePath>
             </File>
           </Files>
         </Group>

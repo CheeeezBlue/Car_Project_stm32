@@ -1,6 +1,6 @@
 #include "PWM.h"
 
-static TIM_TypeDef* const tim_map[] = { TIM2, TIM3, TIM4 };
+static TIM_TypeDef* const tim_map[] = { TIM2, TIM3, TIM4, TIM1 };
 static u16 period_arr[4];
 
 /**
@@ -25,9 +25,11 @@ void PWM_Init(TIM_ID_t tim_id, u16 freq_hz)
 
 	if (tim_id == TIM_ID_2)      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 	else if (tim_id == TIM_ID_3) RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-	else                         RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+	else if (tim_id == TIM_ID_4) RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+	else                         RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
 
 	TIM_TimeBaseInitTypeDef tb;
+	TIM_TimeBaseStructInit(&tb);
 	tb.TIM_ClockDivision = TIM_CKD_DIV1;
 	tb.TIM_CounterMode = TIM_CounterMode_Up;
 	tb.TIM_Period = arr;
@@ -35,6 +37,7 @@ void PWM_Init(TIM_ID_t tim_id, u16 freq_hz)
 	TIM_TimeBaseInit(tim, &tb);
 
 	TIM_OCInitTypeDef oc;
+	TIM_OCStructInit(&oc);
 	oc.TIM_OCMode = TIM_OCMode_PWM1;
 	oc.TIM_OCPolarity = TIM_OCPolarity_High;
 	oc.TIM_OutputState = TIM_OutputState_Enable;

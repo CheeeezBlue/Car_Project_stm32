@@ -3,8 +3,8 @@
 #include "../System/Delay.h"
 #include <stdio.h>
 
-/* 软件 I2C 总线: SCL=PA11, SDA=PA12 (已在 GPIO_InitAll 中配置为 OD) */
-static I2C_Bus_t mpu_i2c = { GPIOA, 11, GPIOA, 12 };
+/* 软件 I2C 总线: 与 OLED 共享 PB8(SCL)/PB9(SDA) */
+static I2C_Bus_t mpu_i2c = { GPIOB, 8, GPIOB, 9 };
 
 static MPU6050_t mpu = {
 	.gyro_bias_z     = 0.0f,
@@ -18,7 +18,7 @@ static MPU6050_t mpu = {
 
 /**
  * @brief  初始化 MPU6050
- * @note   I2C 引脚 PA11/PA12 已在 GPIO_InitAll() 中配置为 OD
+ * @note   I2C 引脚 PB8/PB9 与 OLED 共享，已在 GPIO_InitAll() 中配置为 OD
  *         默认: 陀螺仪 ±250°/s, 加速度计 ±2g, DLPF 42Hz, 采样率 1kHz
  */
 void MPU6050_Init(void)
@@ -114,7 +114,7 @@ void MPU6050_ReadAccelRaw(s16* ax, s16* ay, s16* az)
 }
 
 /**
- * @brief  一次性读取全部 6 轴数据（14 字节突发读，效率最高）
+ * @brief  一次性读取全部 6 轴数据
  * @param  data: 输出物理量 (°/s, m/s²)
  */
 void MPU6050_ReadAll(MPU6050_Data_t* data)
@@ -165,7 +165,7 @@ float MPU6050_ReadGyroZ(void)
 /**
  * @brief  静止状态下采集 N 次陀螺仪 Z 轴，计算零偏均值
  * @param  samples: 采样次数（建议 200~500）
- * @note   调用前小车必须保持静止！
+ * @note   调用前小车必须保持静止
  */
 void MPU6050_CalibrateGyroZ(u16 samples)
 {

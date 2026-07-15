@@ -30,7 +30,7 @@ typedef enum {
 } GPIO_Mode_t;
 
 /* 定时器标识枚举 */
-typedef enum { TIM_ID_2 = 0, TIM_ID_3, TIM_ID_4 } TIM_ID_t;
+typedef enum { TIM_ID_2 = 0, TIM_ID_3, TIM_ID_4, TIM_ID_1 } TIM_ID_t;
 
 /* PWM 通道枚举 */
 typedef enum { PWM_CH1 = 1, PWM_CH2, PWM_CH3, PWM_CH4 } PWM_CH_t;

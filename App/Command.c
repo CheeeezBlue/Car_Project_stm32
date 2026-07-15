@@ -1,8 +1,10 @@
 #include "Command.h"
 #include "CarControl.h"
 #include "YawControl.h"
+#include "LineControl.h"
 #include "../Driver/UART.h"
 #include "../Hardware/Motor.h"
+#include "../Hardware/Menu.h"
 
 void Command_Handle(const char* line)
 {
@@ -91,6 +93,7 @@ void Command_Handle(const char* line)
 		break;
 	}
 
+#if 0  /* Yaw + 巡线 命令（单环调参阶段禁用） */
 	case CMD_YAW:
 		YawControl_SetTarget((float)cmd.value);
 		YawControl_Enable();
@@ -124,6 +127,43 @@ void Command_Handle(const char* line)
 		UART_Printf("Yaw MaxDiff=%.1f\r\n", v);
 		break;
 	}
+
+	case CMD_LINE:
+		LineControl_Enable();
+		UART_Printf("Line ON\r\n");
+		break;
+	case CMD_LINEOFF:
+		LineControl_Disable();
+		UART_Printf("Line OFF\r\n");
+		break;
+	case CMD_LSPD:
+		LineControl_SetSpeed((s8)cmd.value);
+		UART_Printf("Line Speed: %d\r\n", cmd.value);
+		break;
+	case CMD_LKP: {
+		float v = cmd.value / 1000.0f;
+		LineControl_SetKp(v);
+		UART_Printf("Line Kp=%.3f\r\n", v);
+		break;
+	}
+	case CMD_LKI: {
+		float v = cmd.value / 1000.0f;
+		LineControl_SetKi(v);
+		UART_Printf("Line Ki=%.3f\r\n", v);
+		break;
+	}
+	case CMD_LKD: {
+		float v = cmd.value / 1000.0f;
+		LineControl_SetKd(v);
+		UART_Printf("Line Kd=%.3f\r\n", v);
+		break;
+	}
+#endif /* Yaw + 巡线 */
+
+	case CMD_KEY1: Menu_InjectKey(1); break;
+	case CMD_KEY2: Menu_InjectKey(2); break;
+	case CMD_KEY3: Menu_InjectKey(3); break;
+	case CMD_KEY4: Menu_InjectKey(4); break;
 
 	default:
 		break;

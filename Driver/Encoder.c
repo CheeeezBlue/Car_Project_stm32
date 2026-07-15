@@ -21,8 +21,8 @@
 #define COREDBG_BASE    0xE000EDF0UL
 #define COREDBG_DEMCR   (*(volatile u32*)(COREDBG_BASE + 0x00))
 
-#define ENC_A_TIM  TIM3
-#define ENC_B_TIM  TIM4
+#define ENC_A_TIM  TIM4  /* 左轮 (PB6/PB7) */
+#define ENC_B_TIM  TIM3  /* 右轮 (PA6/PA7) */
 
 /* ---- 硬件计数器：32位软件扩展 ---- */
 static volatile s32 enc_cnt[2];   /* 32位软件扩展计数器 */
@@ -41,9 +41,7 @@ static u8  enc_win_idx[2];   /* 环形写入位置 */
 static u8  enc_win_cnt[2];   /* 已填充样本数 */
 static s32 enc_prev_mt[2];   /* Encoder_Update 用的上一次累计值 */
 
-/* ================================================================
-   初始化
-   ================================================================ */
+/* 初始化 */
 void Encoder_Init(void)
 {
 	/* --- DWT 周期计数器（Cortex-M3 内建，14ns 分辨率 @72MHz）--- */

@@ -81,57 +81,44 @@ void GPIO_InitAll(void)
 	/* 禁用JTAG，保留SWD（SWDIO=PA13, SWCLK=PA14仍可用于调试） */
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 
-	/* --- 电机A (IN1→PA4, IN2→PA5) --- */
-	GPIO_InitPin(GPIO_PA, 0, GPIO_AF_PP);    /* MotorA PWM  */
-	GPIO_InitPin(GPIO_PA, 4, GPIO_OUT_PP);   /* MotorA IN1  */
-	GPIO_InitPin(GPIO_PA, 5, GPIO_OUT_PP);   /* MotorA IN2  */
+	/* --- TB6612 电机驱动 --- */
+	GPIO_InitPin(GPIO_PA,  8, GPIO_AF_PP);    /* Left  PWM (TIM1_CH1)  */
+	GPIO_InitPin(GPIO_PB, 12, GPIO_OUT_PP);   /* Left  IN1            */
+	GPIO_InitPin(GPIO_PB, 13, GPIO_OUT_PP);   /* Left  IN2            */
+	GPIO_InitPin(GPIO_PA, 11, GPIO_AF_PP);    /* Right PWM (TIM1_CH4)  */
+	GPIO_InitPin(GPIO_PB, 14, GPIO_OUT_PP);   /* Right IN1            */
+	GPIO_InitPin(GPIO_PB, 15, GPIO_OUT_PP);   /* Right IN2            */
 
-	/* --- 电机B --- */
-	GPIO_InitPin(GPIO_PA, 1, GPIO_AF_PP);    /* MotorB PWM  */
-	GPIO_InitPin(GPIO_PB, 0, GPIO_OUT_PP);   /* MotorB IN1  */
-	GPIO_InitPin(GPIO_PB, 1, GPIO_OUT_PP);   /* MotorB IN2  */
+	/* --- 编码器 --- */
+	GPIO_InitPin(GPIO_PB, 6, GPIO_IN_FLOAT);  /* Left  Enc A (TIM4_CH1) */
+	GPIO_InitPin(GPIO_PB, 7, GPIO_IN_FLOAT);  /* Left  Enc B (TIM4_CH2) */
+	GPIO_InitPin(GPIO_PA, 6, GPIO_IN_FLOAT);  /* Right Enc A (TIM3_CH1) */
+	GPIO_InitPin(GPIO_PA, 7, GPIO_IN_FLOAT);  /* Right Enc B (TIM3_CH2) */
 
-	/* --- 电机编码器A (TIM3 Default → PA6/PA7) --- */
-	GPIO_InitPin(GPIO_PA, 6, GPIO_IN_FLOAT); /* EncA E1A    */
-	GPIO_InitPin(GPIO_PA, 7, GPIO_IN_FLOAT); /* EncA E1B    */
+	/* --- 串口 --- */
+	GPIO_InitPin(GPIO_PA,  9, GPIO_AF_PP);    /* USART1 TX → CH340 RX  */
+	GPIO_InitPin(GPIO_PA, 10, GPIO_IN_FLOAT); /* USART1 RX ← CH340 TX  */
+	GPIO_InitPin(GPIO_PA,  2, GPIO_AF_PP);    /* USART2 TX (备用)      */
+	GPIO_InitPin(GPIO_PA,  3, GPIO_IN_FLOAT); /* USART2 RX (备用)      */
+	GPIO_InitPin(GPIO_PB, 10, GPIO_AF_PP);    /* USART3 TX → HC05 RX  */
+	GPIO_InitPin(GPIO_PB, 11, GPIO_IN_FLOAT); /* USART3 RX ← HC05 TX  */
 
-	/* --- 灰度传感器 --- */
-	GPIO_InitPin(GPIO_PB, 12, GPIO_IN_FLOAT);
-	GPIO_InitPin(GPIO_PB, 13, GPIO_IN_FLOAT);
-	GPIO_InitPin(GPIO_PB, 14, GPIO_IN_FLOAT);
-	GPIO_InitPin(GPIO_PB, 15, GPIO_IN_FLOAT);
-	GPIO_InitPin(GPIO_PA,  8, GPIO_IN_FLOAT);
-	GPIO_InitPin(GPIO_PC, 14, GPIO_IN_FLOAT);
-	GPIO_InitPin(GPIO_PC, 15, GPIO_IN_FLOAT);
+	/* --- 八路灰度 --- */
+	GPIO_InitPin(GPIO_PA, 5, GPIO_IN_FLOAT);  /* OUT (数据)     */
+	GPIO_InitPin(GPIO_PA, 4, GPIO_OUT_PP);    /* AD0 (通道选择) */
+	GPIO_InitPin(GPIO_PA, 0, GPIO_OUT_PP);    /* AD1 (通道选择) */
+	GPIO_InitPin(GPIO_PA, 1, GPIO_OUT_PP);    /* AD2 (通道选择) */
 
-	/* --- 红外避障（PB3/PB4/PB5，JTAG已禁用） --- */
-	GPIO_InitPin(GPIO_PB, 3, GPIO_IN_PU);
-	GPIO_InitPin(GPIO_PB, 4, GPIO_IN_PU);
-	GPIO_InitPin(GPIO_PB, 5, GPIO_IN_PU);
+	/* --- 按键 (PB3/PB4/PB5/PC13，上拉输入，低有效) --- */
+	GPIO_InitPin(GPIO_PB,  3, GPIO_IN_PU);    /* KEY1 */
+	GPIO_InitPin(GPIO_PB,  4, GPIO_IN_PU);    /* KEY2 */
+	GPIO_InitPin(GPIO_PB,  5, GPIO_IN_PU);    /* KEY3 */
+	GPIO_InitPin(GPIO_PC, 13, GPIO_IN_PU);    /* KEY4 */
 
-	/* --- 电机编码器B (TIM4_CH1/CH2, 非电机驱动) --- */
-	GPIO_InitPin(GPIO_PB, 6, GPIO_IN_FLOAT); /* EncB E2A    */
-	GPIO_InitPin(GPIO_PB, 7, GPIO_IN_FLOAT); /* EncB E2B    */
+	/* --- 蜂鸣器 --- */
+	GPIO_InitPin(GPIO_PB, 1, GPIO_OUT_PP);
 
-	/* --- 超声波模块 (Echo→PA15, Trig→PB6 由Timer.c直接操作) --- */
-	GPIO_InitPin(GPIO_PA, 15, GPIO_IN_FLOAT); /* Echo */
-
-	/* --- OLED I2C (SCL→PB8, SDA→PB9, 与OLED.c一致) --- */
-	GPIO_InitPin(GPIO_PB, 8, GPIO_OUT_OD);
-	GPIO_InitPin(GPIO_PB, 9, GPIO_OUT_OD);
-
-	/* --- 调试 UART1 (PC有线) + 蓝牙 UART2 (HC05无线) + 激光 UART3 (VL53L0X) --- */
-	GPIO_InitPin(GPIO_PA,  9, GPIO_AF_PP);    /* USART1 TX */
-	GPIO_InitPin(GPIO_PA, 10, GPIO_IN_FLOAT); /* USART1 RX */
-	GPIO_InitPin(GPIO_PA,  2, GPIO_AF_PP);    /* USART2 TX → HC05 RX */
-	GPIO_InitPin(GPIO_PA,  3, GPIO_IN_FLOAT); /* USART2 RX ← HC05 TX */
-	GPIO_InitPin(GPIO_PB, 10, GPIO_AF_PP);    /* USART3 TX */
-	GPIO_InitPin(GPIO_PB, 11, GPIO_IN_FLOAT); /* USART3 RX ← VL53L0X TX */
-
-	/* --- MPU6050 I2C (软件模拟) --- */
-	GPIO_InitPin(GPIO_PA, 11, GPIO_OUT_OD);   /* I2C SCL */
-	GPIO_InitPin(GPIO_PA, 12, GPIO_OUT_OD);   /* I2C SDA */
-
-	/* --- 板载LED --- */
-	GPIO_InitPin(GPIO_PC, 13, GPIO_OUT_PP);
+	/* --- OLED + MPU6050 共享 I2C (软件模拟) --- */
+	GPIO_InitPin(GPIO_PB, 8, GPIO_OUT_OD);    /* SCL (OLED 0x3C + MPU6050 0x68) */
+	GPIO_InitPin(GPIO_PB, 9, GPIO_OUT_OD);    /* SDA */
 }

@@ -2,23 +2,23 @@
 #include "../Driver/PWM.h"
 #include "../Driver/GPIO.h"
 
-#define MOTOR_TIM      TIM_ID_2
+#define MOTOR_TIM      TIM_ID_1
 #define MOTOR_FREQ_HZ  1000
 
 /* 硬件引脚映射（与GPIO_InitAll一致）：
-   MotorA: PWM=PA0(TIM2_CH1), IN1=PA4, IN2=PA5
-   MotorB: PWM=PA1(TIM2_CH2), IN1=PB0, IN2=PB1 */
+   MotorA: PWM=PA8(TIM1_CH1), IN1=PB12, IN2=PB13
+   MotorB: PWM=PA11(TIM1_CH4), IN1=PB14, IN2=PB15 */
 #define MA_PWM_CH  PWM_CH1
-#define MA_IN1_P   GPIO_PA
-#define MA_IN1_B   4
-#define MA_IN2_P   GPIO_PA
-#define MA_IN2_B   5
+#define MA_IN1_P   GPIO_PB
+#define MA_IN1_B   12
+#define MA_IN2_P   GPIO_PB
+#define MA_IN2_B   13
 
-#define MB_PWM_CH  PWM_CH2
+#define MB_PWM_CH  PWM_CH4
 #define MB_IN1_P   GPIO_PB
-#define MB_IN1_B   0
+#define MB_IN1_B   14
 #define MB_IN2_P   GPIO_PB
-#define MB_IN2_B   1
+#define MB_IN2_B   15
 
 void Motor_Init(void)
 {
@@ -35,12 +35,12 @@ static void motorA_set(s8 duty)
 	if (duty < -100) duty = -100;
 
 	if (duty > 0) {
-		GPIO_WritePin(MA_IN1_P, MA_IN1_B, 1);
-		GPIO_WritePin(MA_IN2_P, MA_IN2_B, 0);
-		PWM_SetDutyPercent(MOTOR_TIM, MA_PWM_CH, (u8)duty);
-	} else if (duty < 0) {
 		GPIO_WritePin(MA_IN1_P, MA_IN1_B, 0);
 		GPIO_WritePin(MA_IN2_P, MA_IN2_B, 1);
+		PWM_SetDutyPercent(MOTOR_TIM, MA_PWM_CH, (u8)duty);
+	} else if (duty < 0) {
+		GPIO_WritePin(MA_IN1_P, MA_IN1_B, 1);
+		GPIO_WritePin(MA_IN2_P, MA_IN2_B, 0);
 		PWM_SetDutyPercent(MOTOR_TIM, MA_PWM_CH, (u8)(-duty));
 	} else {
 		GPIO_WritePin(MA_IN1_P, MA_IN1_B, 0);
@@ -55,12 +55,12 @@ static void motorB_set(s8 duty)
 	if (duty < -100) duty = -100;
 
 	if (duty > 0) {
-		GPIO_WritePin(MB_IN1_P, MB_IN1_B, 1);
-		GPIO_WritePin(MB_IN2_P, MB_IN2_B, 0);
-		PWM_SetDutyPercent(MOTOR_TIM, MB_PWM_CH, (u8)duty);
-	} else if (duty < 0) {
 		GPIO_WritePin(MB_IN1_P, MB_IN1_B, 0);
 		GPIO_WritePin(MB_IN2_P, MB_IN2_B, 1);
+		PWM_SetDutyPercent(MOTOR_TIM, MB_PWM_CH, (u8)duty);
+	} else if (duty < 0) {
+		GPIO_WritePin(MB_IN1_P, MB_IN1_B, 1);
+		GPIO_WritePin(MB_IN2_P, MB_IN2_B, 0);
 		PWM_SetDutyPercent(MOTOR_TIM, MB_PWM_CH, (u8)(-duty));
 	} else {
 		GPIO_WritePin(MB_IN1_P, MB_IN1_B, 0);
