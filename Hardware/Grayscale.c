@@ -36,7 +36,7 @@ void Grayscale_ReadAll(u16* values)
 	for (u8 i = 0; i < GRAY_CHANNELS; i++) {
 		select_ch(i);
 		Delay_us(100);                  /* 多路选择器 + 传感器稳定 */
-		values[i] = GPIO_ReadPin(OUT_P, OUT_B) ? 1 : 0;
+		values[i] = GPIO_ReadPin(OUT_P, OUT_B) ? 1 : 0;  /* 1=黑,0=白 */
 	}
 }
 
@@ -46,7 +46,7 @@ float Grayscale_Calculate_Error(const u16* values)
 	u8 count = 0;
 
 	for (u8 i = 0; i < GRAY_CHANNELS; i++) {
-		if (values[i] == 0) {   /* 0 = 黑线 */
+		if (values[i] == 1) {   /* 1 = 黑线 */
 			sum += (float)i;
 			count++;
 		}

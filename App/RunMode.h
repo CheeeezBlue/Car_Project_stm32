@@ -5,12 +5,10 @@
 
 /* 运行模式 */
 typedef enum {
-	MODE_IDLE,        /* 停车等待 */
-	MODE_MANUAL,      /* 蓝牙命令直控（调参） */
-	MODE_STRAIGHT,    /* 直走定距（编码器）   [TODO] */
-	MODE_LINE,        /* 灰度循迹              [TODO] */
-	MODE_YAW_LOCK,    /* 角度环锁定            [TODO] */
-	MODE_LINE_PARK,   /* 循迹 + 定点停车       [TODO] */
+	MODE_IDLE     = 0,  /* 停车等待 */
+	MODE_MANUAL   = 1,  /* 蓝牙命令直控（调参） */
+	MODE_STRAIGHT = 2,  /* 直走 + 角度环稳定 */
+	MODE_LINE     = 3,  /* 灰度循迹 */
 	MODE_COUNT
 } RunMode_t;
 

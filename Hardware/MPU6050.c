@@ -183,6 +183,10 @@ void MPU6050_CalibrateGyroZ(u16 samples)
 	mpu.gyro_bias_z = (float)sum / (float)samples / mpu.gyro_sensitivity;
 }
 
+/**
+ * @brief  获取当前零偏值
+ * @retval 零偏值
+ */
 float MPU6050_GetGyroZBias(void)
 {
 	return mpu.gyro_bias_z;

@@ -11,10 +11,10 @@
 typedef enum {
 	CMD_NONE, CMD_SPD, CMD_LR, CMD_STOP, CMD_QUERY,
 	CMD_KP, CMD_KI, CMD_KD, CMD_TGT, CMD_OL,   /* OL=开环测试 */
-	CMD_FFL, CMD_FFR, CMD_FFO,                      /* 前馈系数 + 死区偏移 */
-	CMD_YAW, CMD_YAWOFF,                             /* yaw 目标 + 关闭 */
+	CMD_FFL, CMD_FFR, CMD_FFO, CMD_FDB, CMD_RMP,         /* 前馈系数 + 死区 + 斜坡 */
+	CMD_MODE,                                          /* MD:N 模式切换 */
+	CMD_YAW,                                           /* YAW:N 目标角速度 */
 	CMD_YWP, CMD_YWI, CMD_YWD, CMD_YWM,               /* yaw PID + 限幅 */
-	CMD_LINE, CMD_LINEOFF,                             /* 巡线 开关 */
 	CMD_LSPD,                                          /* 巡线 基础速度 */
 	CMD_LKP, CMD_LKI, CMD_LKD,                         /* 巡线 PID */
 	CMD_KEY1, CMD_KEY2, CMD_KEY3, CMD_KEY4             /* 模拟按键 */

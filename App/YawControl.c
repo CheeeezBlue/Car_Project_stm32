@@ -6,7 +6,8 @@ static PID_t  yaw_pid;
 static float  yaw_target;       /* 目标角速度 (°/s) */
 static float  yaw_diff;         /* 当前转速差 (pulses/10ms) */
 static float  yaw_raw_out;      /* PID 原始输出 (调试用) */
-static float  yaw_last_rate;    /* 最近一次角速度 (°/s)，VOFA+ 用 */
+static float  yaw_filt_rate;    /* IIR 低通滤波后的角速度 (°/s) */
+#define YAW_FILT_ALPHA  0.15f   /* IIR 系数，越小滤波越强 */
 static u8     yaw_enabled;
 
 /* ================================================================
@@ -15,11 +16,12 @@ static u8     yaw_enabled;
 void YawControl_Init(void)
 {
 	/* 保守初值: Kp=0.0, Ki=0.0, Kd=0.0, 输出限幅 ±40 */
-	PID_Init(&yaw_pid, 0.0f, 0.0f, 0.0f, -40.0f, 40.0f);
-	yaw_target  = 0.0f;
-	yaw_diff    = 0.0f;
-	yaw_raw_out = 0.0f;
-	yaw_enabled = 0;
+	PID_Init(&yaw_pid, 0.7f, 0.005f, 0.01f, -40.0f, 40.0f);
+	yaw_target    = 0.0f;
+	yaw_diff      = 0.0f;
+	yaw_raw_out   = 0.0f;
+	yaw_filt_rate = 0.0f;
+	yaw_enabled   = 0;
 }
 
 /* ================================================================
@@ -34,8 +36,8 @@ void YawControl_Update(float yaw_rate, float dt)
 		return;
 	}
 
-	yaw_last_rate = yaw_rate;
-	yaw_raw_out   = PID_Compute(&yaw_pid, yaw_target, yaw_rate, dt);
+	yaw_filt_rate += YAW_FILT_ALPHA * (yaw_rate - yaw_filt_rate);
+	yaw_raw_out   = PID_Compute(&yaw_pid, yaw_target, yaw_filt_rate, dt);
 	yaw_diff      = yaw_raw_out;
 }
 
@@ -84,7 +86,7 @@ void YawControl_Disable(void)
 float YawControl_GetDiff(void)      { return yaw_diff; }
 float YawControl_GetTarget(void)    { return yaw_target; }
 float YawControl_GetOutput(void)    { return yaw_raw_out; }
-float YawControl_GetLastRate(void)  { return yaw_last_rate; }
+float YawControl_GetLastRate(void)  { return yaw_filt_rate; }
 float YawControl_GetKp(void)        { return yaw_pid.Kp; }
 float YawControl_GetKi(void)        { return yaw_pid.Ki; }
 float YawControl_GetKd(void)        { return yaw_pid.Kd; }

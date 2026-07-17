@@ -245,6 +245,12 @@ void UART_ParseCmd(const char* line, UART_Cmd_t* cmd)
 	} else if (strncmp(line, "FFO:", 4) == 0) {
 		cmd->type = CMD_FFO;
 		cmd->value = (s16)atoi(line + 4);
+	} else if (strncmp(line, "FDB:", 4) == 0) {
+		cmd->type = CMD_FDB;
+		cmd->value = (s16)atoi(line + 4);
+	} else if (strncmp(line, "RMP:", 4) == 0) {
+		cmd->type = CMD_RMP;
+		cmd->value = (s16)atoi(line + 4);
 	} else if (strncmp(line, "YAWP:", 5) == 0) {
 		cmd->type = CMD_YWP;
 		cmd->value = (s16)atoi(line + 5);
@@ -257,16 +263,13 @@ void UART_ParseCmd(const char* line, UART_Cmd_t* cmd)
 	} else if (strncmp(line, "YAWM:", 5) == 0) {
 		cmd->type = CMD_YWM;
 		cmd->value = (s16)atoi(line + 5);
-	} else if (strncmp(line, "YAW:OFF", 7) == 0) {
-		cmd->type = CMD_YAWOFF;
+	} else if (strncmp(line, "MD:", 3) == 0) {
+		cmd->type = CMD_MODE;
+		cmd->value = (s16)atoi(line + 3);
 	} else if (strncmp(line, "YAW:", 4) == 0) {
 		cmd->type = CMD_YAW;
 		cmd->value = (s16)atoi(line + 4);
-	} else if (strncmp(line, "LINE:OFF", 8) == 0) {
-		cmd->type = CMD_LINEOFF;
-		} else if (strncmp(line, "LINE:ON", 7) == 0 || strncmp(line, "LINE", 4) == 0) {
-		cmd->type = CMD_LINE;
-		} else if (strncmp(line, "LSPD:", 5) == 0) {
+	} else if (strncmp(line, "LSPD:", 5) == 0) {
 		cmd->type = CMD_LSPD;
 		cmd->value = (s16)atoi(line + 5);
 		} else if (strncmp(line, "LKP:", 4) == 0) {

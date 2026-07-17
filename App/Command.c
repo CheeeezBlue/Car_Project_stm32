@@ -2,6 +2,7 @@
 #include "CarControl.h"
 #include "YawControl.h"
 #include "LineControl.h"
+#include "RunMode.h"
 #include "../Driver/UART.h"
 #include "../Hardware/Motor.h"
 #include "../Hardware/Menu.h"
@@ -9,17 +10,27 @@
 void Command_Handle(const char* line)
 {
 	UART_Cmd_t cmd;
-	UART_ParseCmd(line, &cmd); //解析命令
+	UART_ParseCmd(line, &cmd);
+
+	RunMode_t mode = RunMode_Get();
 
 	switch (cmd.type) {
 
+	case CMD_MODE:
+		RunMode_Set((RunMode_t)cmd.value);
+		UART_Printf("Mode: %s\r\n", RunMode_GetName(RunMode_Get()));
+		break;
+
+	/* ---- 速度指令 (禁止在 IDLE 模式) ---- */
 	case CMD_SPD:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
 		Car_SetL(cmd.value);
 		Car_SetR(cmd.value);
 		UART_Printf("Speed: %d\r\n", cmd.value);
 		break;
 
 	case CMD_LR:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
 		if (cmd.left_set && cmd.right_set) {
 			Car_SetL(cmd.left);
 			Car_SetR(cmd.right);
@@ -43,122 +54,110 @@ void Command_Handle(const char* line)
 		            Car_GetEnc(0), Car_GetEnc(1),
 		            Motor_GetLastPWM(MOTOR_LEFT),
 		            Motor_GetLastPWM(MOTOR_RIGHT),
-		            "PID");
+		            RunMode_GetName(mode));
 		break;
 
-	case CMD_KP: {
-		float v = cmd.value / 1000.0f;
-		Car_SetKp(v);
-		UART_Printf("Vel Kp=%.3f\r\n", v);
+	case CMD_KP:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; Car_SetKp(v); UART_Printf("Vel Kp=%.3f\r\n", v); }
 		break;
-	}
-	case CMD_KI: {
-		float v = cmd.value / 1000.0f;
-		Car_SetKi(v);
-		UART_Printf("Vel Ki=%.3f\r\n", v);
+
+	case CMD_KI:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; Car_SetKi(v); UART_Printf("Vel Ki=%.3f\r\n", v); }
 		break;
-	}
-	case CMD_KD: {
-		float v = cmd.value / 1000.0f;
-		Car_SetKd(v);
-		UART_Printf("Vel Kd=%.3f\r\n", v);
+
+	case CMD_KD:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; Car_SetKd(v); UART_Printf("Vel Kd=%.3f\r\n", v); }
 		break;
-	}
+
 	case CMD_TGT:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
 		Car_SetTarget(cmd.value);
 		UART_Printf("Target: %d pulse/10ms\r\n", cmd.value);
 		break;
 
 	case CMD_OL:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
 		Car_OpenLoop(cmd.value);
 		UART_Printf("OpenLoop PWM: %d\r\n", cmd.value);
 		break;
 
-	case CMD_FFL: {
-		float v = cmd.value / 1000.0f;
-		Car_SetFF(v, Car_GetFF_R());
-		UART_Printf("FF_L=%.3f\r\n", v);
+	case CMD_FFL:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; Car_SetFF(v, Car_GetFF_R()); UART_Printf("FF_L=%.3f\r\n", v); }
 		break;
-	}
-	case CMD_FFR: {
-		float v = cmd.value / 1000.0f;
-		Car_SetFF(Car_GetFF_L(), v);
-		UART_Printf("FF_R=%.3f\r\n", v);
-		break;
-	}
-	case CMD_FFO: {
-		float v = cmd.value / 1000.0f;
-		Car_SetFFOffset(v);
-		UART_Printf("FF_Offset=%.1f\r\n", v);
-		break;
-	}
 
-#if 0  /* Yaw + 巡线 命令（单环调参阶段禁用） */
+	case CMD_FFR:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; Car_SetFF(Car_GetFF_L(), v); UART_Printf("FF_R=%.3f\r\n", v); }
+		break;
+
+	case CMD_FFO:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; Car_SetFFOffset(v); UART_Printf("FF_Bias=%.1f\r\n", v); }
+		break;
+
+	case CMD_FDB:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = (float)cmd.value / 1000.0f; Car_SetDeadband(v); UART_Printf("FF_Deadband=%.2f\r\n", v); }
+		break;
+
+	case CMD_RMP:
+		if (mode == MODE_IDLE) { UART_Printf("ERR: Speed blocked in IDLE\r\n"); break; }
+		{ float v = (float)cmd.value / 1000.0f; Car_SetRampStep(v); UART_Printf("Ramp_Step=%.1f\r\n", v); }
+		break;
+
+	/* ---- Yaw 指令 (仅 MODE_STRAIGHT) ---- */
 	case CMD_YAW:
+		if (mode != MODE_STRAIGHT) { UART_Printf("ERR: Yaw needs STRAIGHT mode\r\n"); break; }
 		YawControl_SetTarget((float)cmd.value);
 		YawControl_Enable();
 		UART_Printf("Yaw TGT: %d deg/s\r\n", cmd.value);
 		break;
-	case CMD_YAWOFF:
-		YawControl_Disable();
-		UART_Printf("Yaw OFF\r\n");
-		break;
-	case CMD_YWP: {
-		float v = cmd.value / 1000.0f;
-		YawControl_SetKp(v);
-		UART_Printf("Yaw Kp=%.3f\r\n", v);
-		break;
-	}
-	case CMD_YWI: {
-		float v = cmd.value / 1000.0f;
-		YawControl_SetKi(v);
-		UART_Printf("Yaw Ki=%.3f\r\n", v);
-		break;
-	}
-	case CMD_YWD: {
-		float v = cmd.value / 1000.0f;
-		YawControl_SetKd(v);
-		UART_Printf("Yaw Kd=%.3f\r\n", v);
-		break;
-	}
-	case CMD_YWM: {
-		float v = cmd.value / 1000.0f;
-		YawControl_SetLimit(v);
-		UART_Printf("Yaw MaxDiff=%.1f\r\n", v);
-		break;
-	}
 
-	case CMD_LINE:
-		LineControl_Enable();
-		UART_Printf("Line ON\r\n");
+	case CMD_YWP:
+		if (mode != MODE_STRAIGHT) { UART_Printf("ERR: Yaw needs STRAIGHT mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; YawControl_SetKp(v); UART_Printf("Yaw Kp=%.3f\r\n", v); }
 		break;
-	case CMD_LINEOFF:
-		LineControl_Disable();
-		UART_Printf("Line OFF\r\n");
+
+	case CMD_YWI:
+		if (mode != MODE_STRAIGHT) { UART_Printf("ERR: Yaw needs STRAIGHT mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; YawControl_SetKi(v); UART_Printf("Yaw Ki=%.3f\r\n", v); }
 		break;
+
+	case CMD_YWD:
+		if (mode != MODE_STRAIGHT) { UART_Printf("ERR: Yaw needs STRAIGHT mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; YawControl_SetKd(v); UART_Printf("Yaw Kd=%.3f\r\n", v); }
+		break;
+
+	case CMD_YWM:
+		if (mode != MODE_STRAIGHT) { UART_Printf("ERR: Yaw needs STRAIGHT mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; YawControl_SetLimit(v); UART_Printf("Yaw MaxDiff=%.1f\r\n", v); }
+		break;
+
+	/* ---- 巡线指令 (仅 MODE_LINE) ---- */
 	case CMD_LSPD:
+		if (mode != MODE_LINE) { UART_Printf("ERR: Line needs LINE mode\r\n"); break; }
 		LineControl_SetSpeed((s8)cmd.value);
 		UART_Printf("Line Speed: %d\r\n", cmd.value);
 		break;
-	case CMD_LKP: {
-		float v = cmd.value / 1000.0f;
-		LineControl_SetKp(v);
-		UART_Printf("Line Kp=%.3f\r\n", v);
+
+	case CMD_LKP:
+		if (mode != MODE_LINE) { UART_Printf("ERR: Line needs LINE mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; LineControl_SetKp(v); UART_Printf("Line Kp=%.3f\r\n", v); }
 		break;
-	}
-	case CMD_LKI: {
-		float v = cmd.value / 1000.0f;
-		LineControl_SetKi(v);
-		UART_Printf("Line Ki=%.3f\r\n", v);
+
+	case CMD_LKI:
+		if (mode != MODE_LINE) { UART_Printf("ERR: Line needs LINE mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; LineControl_SetKi(v); UART_Printf("Line Ki=%.3f\r\n", v); }
 		break;
-	}
-	case CMD_LKD: {
-		float v = cmd.value / 1000.0f;
-		LineControl_SetKd(v);
-		UART_Printf("Line Kd=%.3f\r\n", v);
+
+	case CMD_LKD:
+		if (mode != MODE_LINE) { UART_Printf("ERR: Line needs LINE mode\r\n"); break; }
+		{ float v = cmd.value / 1000.0f; LineControl_SetKd(v); UART_Printf("Line Kd=%.3f\r\n", v); }
 		break;
-	}
-#endif /* Yaw + 巡线 */
 
 	case CMD_KEY1: Menu_InjectKey(1); break;
 	case CMD_KEY2: Menu_InjectKey(2); break;
@@ -175,14 +174,12 @@ void Command_Handle(const char* line)
    ================================================================ */
 void Command_HandleFW(u8 type, const u8* payload, u8 len)
 {
-	if (type != 0x01) return;  /* 只处理命令帧，0x02 响应帧是 PC 方向的 */
+	if (type != 0x01) return;
 
-	/* 二进制 payload → C 字符串 */
 	char line[64];
 	u8 n = (len < sizeof(line) - 1) ? len : (u8)(sizeof(line) - 1);
 	for (u8 i = 0; i < n; i++) line[i] = (char)payload[i];
 	line[n] = '\0';
 
-	/* 复用现有文本命令解析 + 分发 */
 	Command_Handle(line);
 }
