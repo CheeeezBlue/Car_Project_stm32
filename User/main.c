@@ -12,11 +12,10 @@
 #include "../App/YawControl.h"
 #include "../App/LineControl.h"
 #include "../Hardware/MPU6050.h"
+#include "../Hardware/Key.h"
 #include "../Hardware/Grayscale.h"
-
 int main(void)
 {
-	/* ---- 系统初始化 ---- */
 	System_Init();
 	GPIO_InitAll();
 	Motor_Init();
@@ -28,14 +27,13 @@ int main(void)
 	UART_Init(UART_ID_3, 115200);
 	UART_EnableIRQ(UART_ID_3);
 
-	/* ---- 控制模块初始化 ---- */
 	CarControl_Init();
 	Grayscale_Init();
 	LineControl_Init();
-	RunMode_Init();          /* 默认 MODE_LINE，开启巡线环 */
-	// Menu_Init();
+	Key_Init();
+	RunMode_Init();
+	Menu_Init();
 
-	/* ---- 传感器初始化 ---- */
 	MPU6050_Init();
 	Delay_ms(100);
 	MPU6050_CalibrateGyroZ(300);
@@ -46,7 +44,6 @@ int main(void)
 	u16 v_tick = 0;
 
 	while (1) {
-		/* ---- 串口命令 ---- */
 		char line[UART_LINE_SIZE];
 		if (UART_GetLine(UART_ID_1, line, sizeof(line))) {
 			Command_Handle(line);
@@ -55,12 +52,10 @@ int main(void)
 			Command_Handle(line);
 		}
 
-		/* ---- 传感器 ---- */
 		u16 gray[GRAY_CHANNELS];
 		Grayscale_ReadAll(gray);
 		float yaw_rate = MPU6050_ReadGyroZ();
 
-		/* ---- 转向调度 ---- */
 		switch (RunMode_Get()) {
 		case MODE_IDLE:
 		case MODE_MANUAL:
@@ -75,8 +70,9 @@ int main(void)
 			break;
 		}
 
-		/* ---- 速度闭环 + VOFA+ 上报 (50ms) ---- */
 		RunMode_Update();
+		Menu_Update();
+
 		if (++v_tick >= 5) {
 			v_tick = 0;
 			UART_Printf("%.0f,%.0f,%.1f,%.1f,%.2f,%.1f\r\n",

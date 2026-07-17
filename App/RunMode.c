@@ -3,7 +3,7 @@
 #include "LineControl.h"
 #include "YawControl.h"
 
-static RunMode_t current_mode = MODE_LINE;
+static RunMode_t current_mode = MODE_IDLE;
 
 static const char* mode_names[] = {
 	"IDLE",
@@ -17,8 +17,7 @@ static const char* mode_names[] = {
    ================================================================ */
 void RunMode_Init(void)
 {
-	current_mode = MODE_LINE;
-	LineControl_Enable();
+	current_mode = MODE_IDLE;
 }
 
 /* ================================================================

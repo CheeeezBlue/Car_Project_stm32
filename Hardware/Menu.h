@@ -28,8 +28,8 @@ typedef enum {
 #define PIDCAT_LINE   1
 
 /* 调参步长 */
-#define PID_STEP_FINE    0.001f
-#define PID_STEP_COARSE  0.010f
+#define PID_STEP_FINE    0.010f
+#define PID_STEP_COARSE  0.050f
 #define LONG_PRESS_TICKS 50      /* 0.5s @ 10ms */
 #define REPEAT_INTERVAL  3       /* 每 30ms 连发 */
 

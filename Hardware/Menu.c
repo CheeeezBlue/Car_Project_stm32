@@ -6,6 +6,7 @@
 #include "../App/LineControl.h"
 #include "../Hardware/Motor.h"
 #include "../Driver/GPIO.h"
+#include "../Driver/UART.h"
 #include "../System/Delay.h"
 #include <stdio.h>
 
@@ -26,7 +27,6 @@ static struct {
 	u8  pid_param;     /* PID_TUNE: 0=Kp,1=Ki,2=Kd */
 	u8  key_held;      /* 当前持续按下的键 0=无 */
 	u16 hold_ticks;
-	u8  pending;       /* 待执行动作: 0=无, 1=短按, 2=长按连发 */        
 	u16 confirm_tick;  /* 启停确认倒计时 */
 	u8  dirty;         /* 需要重绘 */
 } menu;
@@ -35,6 +35,7 @@ static struct {
 static void Render(void);
 static void RenderDataPage(u8 cat, u8 pg);
 static u8   KeyRaw(u8 id);
+static void Menu_Dispatch(u8 key, u8 act);
 static void KeyScan(void);
 
 /* ================================================================
@@ -53,11 +54,14 @@ void Menu_Init(void)
 	menu.pid_param    = 0;
 	menu.key_held     = 0;
 	menu.hold_ticks   = 0;
-	menu.pending      = 0;
 	menu.confirm_tick = 0;
 	menu.dirty        = 1;
 
 	Delay_ms(1500);
+
+	/* 将 prev 状态同步到当前引脚电平，避免上电瞬间误触发边沿 */
+	Key_GetNum();
+
 	OLED_Clear();
 	Render();
 }
@@ -88,7 +92,7 @@ void Menu_Update(void)
 }
 
 /* ================================================================
-   按键扫描：短按 + 长按检测
+   按键扫描：仅负责物理按键检测 → 交给 Menu_Dispatch
    ================================================================ */
 static void KeyScan(void)
 {
@@ -96,10 +100,10 @@ static void KeyScan(void)
 	if (menu.key_held && KeyRaw(menu.key_held)) {
 		menu.hold_ticks++;
 		if (menu.hold_ticks == 1) {
-			menu.pending = 1;  /* 首次短按 */
+			Menu_Dispatch(menu.key_held, 1);       /* 首次短按 */
 		} else if (menu.hold_ticks > LONG_PRESS_TICKS &&
 		           (menu.hold_ticks % REPEAT_INTERVAL == 0)) {
-			menu.pending = 2;  /* 长按连发 */
+			Menu_Dispatch(menu.key_held, 2);       /* 长按连发 */
 		}
 	} else {
 		/* 按键已松开，检查新按下 */
@@ -110,44 +114,44 @@ static void KeyScan(void)
 		if (key) {
 			menu.key_held   = key;
 			menu.hold_ticks = 1;
-			menu.pending    = 1;  /* 首次短按 */
-			return;
+			Menu_Dispatch(key, 1);
 		}
 	}
+}
 
-	if (!menu.pending) return;
-
-	u8 act = menu.pending;
-	menu.pending = 0;
+/* ================================================================
+   动作分发：物理按键和串口命令共用
+   ================================================================ */
+static void Menu_Dispatch(u8 key, u8 act)
+{
+	UART_Printf("[KEY] L%d key=%d act=%d\r\n", menu.level, key, act);
 
 	switch (menu.level) {
 
-	/* ================================================================
-	   MENU_MAIN — 主菜单
-	   ================================================================ */
+	/* ---- MENU_MAIN ---- */
 	case MENU_MAIN:
 		if (act != 1) break;
-		switch (menu.key_held) {
-		case 1:  /* KEY1: 模式切换 */
+		switch (key) {
+		case 1:
 			menu.level = MENU_MODE_SELECT;
 			menu.cursor = 0;
 			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 2:  /* KEY2: 数据显示 */
+		case 2:
 			menu.level = MENU_DATA_CAT;
 			menu.cursor = 0;
 			menu.data_cat = 0;
 			menu.data_page = 0;
 			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 3:  /* KEY3: PID调参 */
+		case 3:
 			menu.level = MENU_PID_CAT;
 			menu.cursor = 0;
 			menu.pid_cat = 0;
 			menu.pid_param = 0;
 			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 4:  /* KEY4: 一键启停 */
+		case 4:
 			menu.level = MENU_RUN_CONFIRM;
 			menu.confirm_tick = 0;
 			OLED_Clear(); menu.dirty = 1;
@@ -155,109 +159,102 @@ static void KeyScan(void)
 		}
 		break;
 
-	/* ================================================================
-	   MENU_MODE_SELECT — 模式切换
-	   ================================================================ */
+	/* ---- MENU_MODE_SELECT ---- */
 	case MENU_MODE_SELECT:
 		if (act != 1) break;
-		switch (menu.key_held) {
+		switch (key) {
 		case 1: case 2: case 3:
-			RunMode_Set((RunMode_t)mode_slots[menu.key_held - 1]);
-			menu.dirty = 1;
+			RunMode_Set((RunMode_t)mode_slots[key - 1]);
+			menu.level = MENU_MAIN;
+			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 4:  /* 返回 */
+		case 4:
 			menu.level = MENU_MAIN;
 			OLED_Clear(); menu.dirty = 1;
 			break;
 		}
 		break;
 
-	/* ================================================================
-	   MENU_DATA_CAT — 数据类别
-	   ================================================================ */
+	/* ---- MENU_DATA_CAT ---- */
 	case MENU_DATA_CAT:
 		if (act != 1) break;
-		switch (menu.key_held) {
-		case 1:  /* 上翻类别 */
+		switch (key) {
+		case 1:
 			menu.data_cat = (menu.data_cat == 0)
 				? DATA_CAT_COUNT - 1 : menu.data_cat - 1;
 			menu.data_page = 0;
 			menu.dirty = 1;
 			break;
-		case 2:  /* 下翻类别 */
+		case 2:
 			menu.data_cat = (menu.data_cat + 1) % DATA_CAT_COUNT;
 			menu.data_page = 0;
 			menu.dirty = 1;
 			break;
-		case 3:  /* 进入该类别翻页 */
+		case 3:
 			menu.level = MENU_DATA_PAGE;
 			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 4:  /* 返回 */
+		case 4:
 			menu.level = MENU_MAIN;
 			OLED_Clear(); menu.dirty = 1;
 			break;
 		}
 		break;
 
-	/* ================================================================
-	   MENU_DATA_PAGE — 数据翻页
-	   ================================================================ */
+	/* ---- MENU_DATA_PAGE ---- */
 	case MENU_DATA_PAGE:
 		if (act != 1) break;
-		switch (menu.key_held) {
-		case 1:  /* 上页 */
+		switch (key) {
+		case 1:
 			if (menu.data_page > 0) {
 				menu.data_page--;
 				menu.dirty = 1;
 			}
 			break;
-		case 2:  /* 下页 */
-			menu.data_page++;
-			menu.dirty = 1;
+		case 2: {
+			u8 max_pg = (menu.data_cat == DATA_SPEED) ? 3 : 0;
+			if (menu.data_page < max_pg) {
+				menu.data_page++;
+				menu.dirty = 1;
+			}
 			break;
-		case 4:  /* 返回类别选择 */
+		}
+		case 4:
 			menu.level = MENU_DATA_CAT;
 			OLED_Clear(); menu.dirty = 1;
 			break;
 		}
 		break;
 
-	/* ================================================================
-	   MENU_PID_CAT — PID 类别
-	   ================================================================ */
+	/* ---- MENU_PID_CAT ---- */
 	case MENU_PID_CAT:
 		if (act != 1) break;
-		switch (menu.key_held) {
-		case 1:  /* 速度环 PID */
+		switch (key) {
+		case 1:
 			menu.pid_cat = PIDCAT_SPEED;
 			menu.pid_param = 0;
 			menu.level = MENU_PID_TUNE;
 			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 2:  /* 灰度 PID */
+		case 2:
 			menu.pid_cat = PIDCAT_LINE;
 			menu.pid_param = 0;
 			menu.level = MENU_PID_TUNE;
 			OLED_Clear(); menu.dirty = 1;
 			break;
-		case 4:  /* 返回 */
+		case 4:
 			menu.level = MENU_MAIN;
 			OLED_Clear(); menu.dirty = 1;
 			break;
 		}
 		break;
 
-	/* ================================================================
-	   MENU_PID_TUNE — PID 调参
-	   ================================================================ */
+	/* ---- MENU_PID_TUNE ---- */
 	case MENU_PID_TUNE: {
 		float step = (act == 2) ? PID_STEP_COARSE : PID_STEP_FINE;
-		int dir = (menu.key_held == 1) ? 1 :
-		          (menu.key_held == 2) ? -1 : 0;
+		int dir = (key == 1) ? 1 : (key == 2) ? -1 : 0;
 
-		if (menu.key_held == 3 && act == 1) {
-			/* KEY3: 切换 Kp→Ki→Kd */
+		if (key == 3 && act == 1) {
 			menu.pid_param = (menu.pid_param + 1) % 3;
 			menu.dirty = 1;
 		} else if (dir != 0 && menu.pid_cat == PIDCAT_SPEED) {
@@ -274,29 +271,23 @@ static void KeyScan(void)
 			case 2: LineControl_SetKd(LineControl_GetKd() + step * dir); break;
 			}
 			menu.dirty = 1;
-		} else if (menu.key_held == 4 && act == 1) {
-			/* KEY4: 返回 */
+		} else if (key == 4 && act == 1) {
 			menu.level = MENU_PID_CAT;
 			OLED_Clear(); menu.dirty = 1;
 		}
 		break;
 	}
 
-	/* ================================================================
-	   MENU_RUN_CONFIRM — 启停二次确认
-	   ================================================================ */
+	/* ---- MENU_RUN_CONFIRM ---- */
 	case MENU_RUN_CONFIRM:
 		if (act != 1) break;
-		if (menu.key_held == 4) {
-			/* 确认执行 */
+		if (key == 4) {
 			RunMode_Run();
-			menu.level = MENU_MAIN;
-			OLED_Clear(); menu.dirty = 1;
 		} else {
-			/* 其他键取消 */
-			menu.level = MENU_MAIN;
-			OLED_Clear(); menu.dirty = 1;
+			RunMode_Stop();
 		}
+		menu.level = MENU_MAIN;
+		OLED_Clear(); menu.dirty = 1;
 		break;
 	}
 }
@@ -316,6 +307,15 @@ static u8 KeyRaw(u8 id)
 }
 
 /* ================================================================
+   串口命令直接操作菜单（不再走 KeyScan）
+   ================================================================ */
+void Menu_InjectKey(u8 key)
+{
+	if (key < 1 || key > 4) return;
+	Menu_Dispatch(key, 1);
+}
+
+/* ================================================================
    完整页面渲染（按当前 menu 状态）
    ================================================================ */
 static void Render(void)
@@ -327,9 +327,9 @@ static void Render(void)
 	/* ---- 主菜单 ---- */
 	case MENU_MAIN:
 		OLED_ShowString(1, 2, "===  MAIN  ===");
-		OLED_ShowString(2, 0, "1.Mode  2.Data ");
-		OLED_ShowString(3, 0, "3.PID   4.Run   ");
-		OLED_ShowString(4, 0, "   ");
+		OLED_ShowString(2, 1, "1.Mode  2.Data ");
+		OLED_ShowString(3, 1, "3.PID   4.Run   ");
+		OLED_ShowString(4, 1, "   ");
 		break;
 
 	/* ---- 模式切换 ---- */
@@ -340,7 +340,7 @@ static void Render(void)
 			char mark = ((RunMode_t)mode_slots[i] == cur) ? '>' : ' ';
 			sprintf(buf, "%c%d.%-13s",
 			        mark, i + 1, RunMode_GetName((RunMode_t)mode_slots[i]));
-			OLED_ShowString(2 + i, 0, buf);
+			OLED_ShowString(2 + i, 1, buf);
 		}
 		break;
 	}
@@ -353,11 +353,11 @@ static void Render(void)
 			"YAW ANGLE",
 			"SYSTEM",
 		};
-		OLED_ShowString(1, 1, " DATA  SELECT");
+		OLED_ShowString(1, 2, " DATA  SELECT");
 		sprintf(buf, "> %-14s", cat_names[menu.data_cat]);
-		OLED_ShowString(2, 0, buf);
-		OLED_ShowString(3, 0, "   KEY1/2:switch");
-		OLED_ShowString(4, 0, "KEY3:enter 4:back");
+		OLED_ShowString(2, 1, buf);
+		OLED_ShowString(3, 1, "   KEY1/2:switch");
+		OLED_ShowString(4, 1, "KEY3:enter 4:back");
 		break;
 	}
 
@@ -369,9 +369,9 @@ static void Render(void)
 	/* ---- PID 类别 ---- */
 	case MENU_PID_CAT:
 		OLED_ShowString(1, 2, " PID  SELECT");
-		OLED_ShowString(2, 0, "1.SPEED PID    ");
-		OLED_ShowString(3, 0, "2.LINE  PID    ");
-		OLED_ShowString(4, 0, "   4.BACK      ");
+		OLED_ShowString(2, 1, "1.SPEED PID    ");
+		OLED_ShowString(3, 1, "2.LINE  PID    ");
+		OLED_ShowString(4, 1, "   4.BACK      ");
 		break;
 
 	/* ---- PID 调参 ---- */
@@ -385,24 +385,24 @@ static void Render(void)
 
 		const char* title = (menu.pid_cat == PIDCAT_SPEED)
 			? " SPEED PID" : " LINE  PID";
-		OLED_ShowString(1, 0, title);
+		OLED_ShowString(1, 1, title);
 
 		sprintf(buf, "%cKp:%-10.3f", menu.pid_param == 0 ? '*' : ' ', kp);
-		OLED_ShowString(2, 0, buf);
+		OLED_ShowString(2, 1, buf);
 		sprintf(buf, "%cKi:%-10.3f", menu.pid_param == 1 ? '*' : ' ', ki);
-		OLED_ShowString(3, 0, buf);
+		OLED_ShowString(3, 1, buf);
 		sprintf(buf, "%cKd:%-10.3f", menu.pid_param == 2 ? '*' : ' ', kd);
-		OLED_ShowString(4, 0, buf);
+		OLED_ShowString(4, 1, buf);
 		break;
 	}
 
 	/* ---- 启停确认 ---- */
 	case MENU_RUN_CONFIRM:
 		OLED_ShowString(1, 2, " RUN  MODE ?");
-		OLED_ShowString(2, 0, "                ");
+		OLED_ShowString(2, 1, "                ");
 		sprintf(buf, "  %-12s", RunMode_GetName(RunMode_Get()));
-		OLED_ShowString(3, 0, buf);
-		OLED_ShowString(4, 0, "KEY4=GO  ANY=NO");
+		OLED_ShowString(3, 1, buf);
+		OLED_ShowString(4, 1, "4=RUN 1/2/3=STOP");
 		break;
 	}
 }
@@ -420,51 +420,51 @@ static void RenderDataPage(u8 cat, u8 pg)
 		switch (pg) {
 		case 0:  /* 总览 */
 			OLED_ShowString(1, 2, "SPEED  LOOP");
-			sprintf(buf, "L:%-4d R:%-4d",
+			sprintf(buf, "LT:%-4d RT:%-4d",
 			        (int)Car_GetTarget(0), (int)Car_GetTarget(1));
-			OLED_ShowString(2, 0, buf);
-			sprintf(buf, "E:%-4d E:%-4d",
-			        Car_GetEnc(0), Car_GetEnc(1));
-			OLED_ShowString(3, 0, buf);
-			sprintf(buf, "P:%-4.0f P:%-4.0f",
+			OLED_ShowString(2, 1, buf);
+			sprintf(buf, "LS:%-4.0f RS:%-4.0f",
+			        Car_GetFiltSpeed(0), Car_GetFiltSpeed(1));
+			OLED_ShowString(3, 1, buf);
+			sprintf(buf, "LP:%-4.0f RP:%-4.0f",
 			        Motor_GetLastPWM(MOTOR_LEFT),
 			        Motor_GetLastPWM(MOTOR_RIGHT));
-			OLED_ShowString(4, 0, buf);
+			OLED_ShowString(4, 1, buf);
 			return;
 		case 1:  /* PID */
 			OLED_ShowString(1, 2, "PID  MONITOR");
 			sprintf(buf, "Kp:%.3f Ki:%.3f",
 			        Car_GetKp(), Car_GetKi());
-			OLED_ShowString(2, 0, buf);
+			OLED_ShowString(2, 1, buf);
 			sprintf(buf, "Kd:%.3f", Car_GetKd());
-			OLED_ShowString(3, 0, buf);
+			OLED_ShowString(3, 1, buf);
 			sprintf(buf, "T:%-4.0f T:%-4.0f",
 			        Car_GetTarget(0), Car_GetTarget(1));
-			OLED_ShowString(4, 0, buf);
+			OLED_ShowString(4, 1, buf);
 			return;
 		case 2:  /* 左电机 */
 			OLED_ShowString(1, 3, "MOTOR LEFT");
 			sprintf(buf, "SPD:%-4d ENC:%-4d",
 			        (int)Car_GetTarget(0), Car_GetEnc(0));
-			OLED_ShowString(2, 0, buf);
+			OLED_ShowString(2, 1, buf);
 			sprintf(buf, "PWM:%-4.0f",
 			        Motor_GetLastPWM(MOTOR_LEFT));
-			OLED_ShowString(3, 0, buf);
+			OLED_ShowString(3, 1, buf);
 			sprintf(buf, "FLT:%-5.1f",
 			        Car_GetFiltSpeed(0));
-			OLED_ShowString(4, 0, buf);
+			OLED_ShowString(4, 1, buf);
 			return;
 		case 3:  /* 右电机 */
 			OLED_ShowString(1, 3, "MOTOR RIGHT");
 			sprintf(buf, "SPD:%-4d ENC:%-4d",
 			        (int)Car_GetTarget(1), Car_GetEnc(1));
-			OLED_ShowString(2, 0, buf);
+			OLED_ShowString(2, 1, buf);
 			sprintf(buf, "PWM:%-4.0f",
 			        Motor_GetLastPWM(MOTOR_RIGHT));
-			OLED_ShowString(3, 0, buf);
+			OLED_ShowString(3, 1, buf);
 			sprintf(buf, "FLT:%-5.1f",
 			        Car_GetFiltSpeed(1));
-			OLED_ShowString(4, 0, buf);
+			OLED_ShowString(4, 1, buf);
 			return;
 		}
 		break;
@@ -472,41 +472,30 @@ static void RenderDataPage(u8 cat, u8 pg)
 	case DATA_GRAY:
 		OLED_ShowString(1, 2, "GRAYSCALE");
 		OLED_ShowString(2, 2, "   (disabled)");
-		OLED_ShowString(3, 0, "                ");
-		OLED_ShowString(4, 0, "                ");
+		OLED_ShowString(3, 1, "                ");
+		OLED_ShowString(4, 1, "                ");
 		return;
 
 	case DATA_YAW:
 		OLED_ShowString(1, 2, "YAW ANGLE");
 		OLED_ShowString(2, 2, "   (disabled)");
-		OLED_ShowString(3, 0, "                ");
-		OLED_ShowString(4, 0, "                ");
+		OLED_ShowString(3, 1, "                ");
+		OLED_ShowString(4, 1, "                ");
 		return;
 
 	case DATA_SYS:
 		OLED_ShowString(1, 2, "   SYSTEM");
 		sprintf(buf, "MODE:%-11s",
 		        RunMode_GetName(RunMode_Get()));
-		OLED_ShowString(2, 0, buf);
-		OLED_ShowString(3, 0, "UART1/3  OK    ");
-		OLED_ShowString(4, 0, "KEY1/2:pg 4:back");
+		OLED_ShowString(2, 1, buf);
+		OLED_ShowString(3, 1, "UART1/3  OK    ");
+		OLED_ShowString(4, 1, "    4:BACK      ");
 		return;
 	}
 
 	/* 越界 */
 	OLED_ShowString(1, 2, "   NO DATA");
-	OLED_ShowString(2, 0, "                ");
-	OLED_ShowString(3, 0, "                ");
-	OLED_ShowString(4, 0, "                ");
-}
-
-/* ================================================================
-   远程注入按键（串口命令 KEY1~KEY4 → 模拟短按）
-   ================================================================ */
-void Menu_InjectKey(u8 key)
-{
-	if (key < 1 || key > 4) return;
-	menu.key_held   = key;
-	menu.hold_ticks = 1;
-	menu.pending    = 1;
+	OLED_ShowString(2, 1, "                ");
+	OLED_ShowString(3, 1, "                ");
+	OLED_ShowString(4, 1, "                ");
 }
