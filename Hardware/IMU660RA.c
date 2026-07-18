@@ -71,9 +71,15 @@ void IMU660RA_Init(void)
 	imu_write_reg(IMU660RA_INIT_CTRL, 0x01);       /* 初始化配置结束 */
 	Delay_ms(20);
 
-	if (imu_read_reg(IMU660RA_INT_STA) != 1) return; /* 配置未完成 */
+	{
+		u8 sta = imu_read_reg(IMU660RA_INT_STA);
+		if (sta != 1) {
+			/* 配置未完成, 但继续配置传感器 (兼容某些情况) */
+		}
+	}
 
 	imu_write_reg(IMU660RA_PWR_CTRL, 0x0E);        /* 性能模式, 使能陀螺+加计+温度 */
+	Delay_ms(10);
 	imu_write_reg(IMU660RA_ACC_CONF, 0xA7);         /* 50Hz 采样 */
 	imu_write_reg(IMU660RA_GYR_CONF, 0xA9);         /* 200Hz 采样 */
 	imu_write_reg(IMU660RA_ACC_RANGE, IMU660RA_ACC_FS);

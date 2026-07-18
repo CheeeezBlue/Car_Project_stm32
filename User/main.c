@@ -11,10 +11,10 @@
 #include "../Hardware/Menu.h"
 #include "../App/YawControl.h"
 #include "../App/LineControl.h"
-#include "../Hardware/MPU6050.h"
 #include "../Hardware/IMU660RA.h"
 #include "../Hardware/Key.h"
 #include "../Hardware/Grayscale.h"
+
 int main(void)
 {
 	System_Init();
@@ -37,7 +37,6 @@ int main(void)
 
 	IMU660RA_Init();
 	IMU660RA_CalibrateGyroZ(200);
-	Delay_ms(50);
 	YawControl_Init();
 
 	UART_Printf(" Car Ready!\r\n");

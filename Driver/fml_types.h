@@ -39,6 +39,7 @@ typedef enum { PWM_CH1 = 1, PWM_CH2, PWM_CH3, PWM_CH4 } PWM_CH_t;
 typedef struct {
 	GPIO_TypeDef* scl_port; u16 scl_pin;
 	GPIO_TypeDef* sda_port; u16 sda_pin;
+	u8 speed;
 } I2C_Bus_t;
 
 /* UART 标识枚举 */

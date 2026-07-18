@@ -761,14 +761,14 @@
               <FilePath>.\Hardware\Menu.h</FilePath>
             </File>
             <File>
-              <FileName>JY901S.c</FileName>
+              <FileName>IMU660RA.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Hardware\JY901S.c</FilePath>
+              <FilePath>.\Hardware\IMU660RA.c</FilePath>
             </File>
             <File>
-              <FileName>JY901S.h</FileName>
+              <FileName>IMU660RA.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\Hardware\JY901S.h</FilePath>
+              <FilePath>.\Hardware\IMU660RA.h</FilePath>
             </File>
           </Files>
         </Group>
