@@ -22,7 +22,7 @@ static float  ramp_L, ramp_R;               /* 斜坡输出 */
 static float  ramp_max_step = 5.0f;         /* 每周期最大变化量 */
 
 /* 仿射前馈: PWM_FF = k * |v| + b * sign(v),  |v| ≤ deadband 时置零 */
-static float  ff_k_L = 0.745f, ff_k_R = 0.690f;
+static float  ff_k_L = 0.800f, ff_k_R = 0.754f;
 static float  ff_b_L = 4.55f, ff_b_R = 4.55f;
 static float  ff_deadband = 1.0f;           /* 低于此值前馈置零 */
 

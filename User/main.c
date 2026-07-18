@@ -12,6 +12,7 @@
 #include "../App/YawControl.h"
 #include "../App/LineControl.h"
 #include "../Hardware/MPU6050.h"
+#include "../Hardware/JY901S.h"
 #include "../Hardware/Key.h"
 #include "../Hardware/Grayscale.h"
 int main(void)
@@ -34,9 +35,8 @@ int main(void)
 	RunMode_Init();
 	Menu_Init();
 
-	MPU6050_Init();
-	Delay_ms(100);
-	MPU6050_CalibrateGyroZ(300);
+	JY901S_Init();
+	Delay_ms(200);   /* 等待JY901S模块启动并输出第一帧 */
 	YawControl_Init();
 
 	UART_Printf(" Car Ready!\r\n");
@@ -54,7 +54,8 @@ int main(void)
 
 		u16 gray[GRAY_CHANNELS];
 		Grayscale_ReadAll(gray);
-		float yaw_rate = MPU6050_ReadGyroZ();
+		JY901S_Update();
+		float yaw_rate = JY901S_ReadGyroZ();
 
 		switch (RunMode_Get()) {
 		case MODE_IDLE:
