@@ -24,7 +24,7 @@ static s8    lost_saved_spd;  /* 丢线前原始速度 */
 
 void LineControl_Init(void)
 {
-	PID_Init(&line_pid, 5.0f, 0.0f, 0.0f, -40.0f, 40.0f);
+	PID_Init(&line_pid, 7.5f, 0.0f, 0.4f, -40.0f, 40.0f);
 	error      = 0.0f;
 	filt_err   = 0.0f;
 	output     = 0.0f;

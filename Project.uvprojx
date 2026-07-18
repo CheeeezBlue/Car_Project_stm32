@@ -760,6 +760,16 @@
               <FileType>5</FileType>
               <FilePath>.\Hardware\Menu.h</FilePath>
             </File>
+            <File>
+              <FileName>JY901S.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\JY901S.c</FilePath>
+            </File>
+            <File>
+              <FileName>JY901S.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\JY901S.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

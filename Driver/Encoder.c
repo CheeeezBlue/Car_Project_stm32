@@ -49,37 +49,34 @@ void Encoder_Init(void)
 	DWT_CYCCNT = 0;
 	DWT_CTRL |= 1;                 /* CYCCNTENA */
 
-	/* --- TIM3: 编码器A（默认引脚 PA6/PA7）--- */
+	/* 先开启两个定时器时钟，再配置 */
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
 
 	TIM_TimeBaseInitTypeDef tim_base;
 	tim_base.TIM_Prescaler = 0;
 	tim_base.TIM_Period = 0xFFFF;
 	tim_base.TIM_ClockDivision = TIM_CKD_DIV1;
 	tim_base.TIM_CounterMode = TIM_CounterMode_Up;
-	TIM_TimeBaseInit(ENC_A_TIM, &tim_base);
 
-	TIM_EncoderInterfaceConfig(ENC_A_TIM,
+	/* 左轮编码器 — TIM4 (PB6/PB7) */
+	TIM_TimeBaseInit(TIM4, &tim_base);
+	TIM_EncoderInterfaceConfig(TIM4,
 		TIM_EncoderMode_TI12,
 		TIM_ICPolarity_Rising,
 		TIM_ICPolarity_Rising);
+	TIM_SetCounter(TIM4, 0);
+	TIM_Cmd(TIM4, ENABLE);
 
-	TIM_SetCounter(ENC_A_TIM, 0);
-	TIM_Cmd(ENC_A_TIM, ENABLE);
-
-	/* --- TIM4: 编码器B（默认引脚 PB6/PB7）--- */
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
-
+	/* 右轮编码器 — TIM3 (PA6/PA7) */
 	tim_base.TIM_Period = 0xFFFF;
-	TIM_TimeBaseInit(ENC_B_TIM, &tim_base);
-
-	TIM_EncoderInterfaceConfig(ENC_B_TIM,
+	TIM_TimeBaseInit(TIM3, &tim_base);
+	TIM_EncoderInterfaceConfig(TIM3,
 		TIM_EncoderMode_TI12,
 		TIM_ICPolarity_Rising,
 		TIM_ICPolarity_Rising);
-
-	TIM_SetCounter(ENC_B_TIM, 0);
-	TIM_Cmd(ENC_B_TIM, ENABLE);
+	TIM_SetCounter(TIM3, 0);
+	TIM_Cmd(TIM3, ENABLE);
 
 	/* 清零全部状态 */
 	enc_cnt[0] = 0; enc_cnt[1] = 0;
