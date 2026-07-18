@@ -59,17 +59,6 @@ void JY901S_Update(void)
 	}
 }
 
-float JY901S_ReadGyroZ(void)
-{
-	return gyro_z;
-}
-
-float JY901S_ReadYaw(void)
-{
-	return yaw;
-}
-
-u8 JY901S_IsValid(void)
-{
-	return valid;
-}
+float JY901S_ReadGyroZ(void) { return gyro_z; }
+float JY901S_ReadYaw(void)   { return yaw; }
+u8    JY901S_IsValid(void)   { return valid; }

@@ -36,7 +36,7 @@ int main(void)
 	Menu_Init();
 
 	JY901S_Init();
-	Delay_ms(200);
+	Delay_ms(200);   /* 等待JY901S模块启动并输出第一帧 */
 	YawControl_Init();
 
 	UART_Printf(" Car Ready!\r\n");
