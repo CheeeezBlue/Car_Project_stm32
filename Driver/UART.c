@@ -251,7 +251,19 @@ void UART_ParseCmd(const char* line, UART_Cmd_t* cmd)
 	} else if (strncmp(line, "RMP:", 4) == 0) {
 		cmd->type = CMD_RMP;
 		cmd->value = (s16)atoi(line + 4);
-	} else if (strncmp(line, "YAWP:", 5) == 0) {
+		} else if (strncmp(line, "YHP:", 4) == 0) {
+			cmd->type = CMD_YHP;
+			cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "YHI:", 4) == 0) {
+			cmd->type = CMD_YHI;
+			cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "YHD:", 4) == 0) {
+			cmd->type = CMD_YHD;
+			cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "YRL:", 4) == 0) {
+			cmd->type = CMD_YRL;
+			cmd->value = (s16)atoi(line + 4);
+		} else if (strncmp(line, "YAWP:", 5) == 0) {
 		cmd->type = CMD_YWP;
 		cmd->value = (s16)atoi(line + 5);
 	} else if (strncmp(line, "YAWI:", 5) == 0) {

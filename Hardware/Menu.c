@@ -12,9 +12,9 @@
 
 /* ---- 模式槽位 ---- */
 const u8 mode_slots[MODE_SLOT_COUNT] = {
-	MODE_IDLE,       /* KEY1: 暂停小车 */
-	MODE_MANUAL,     /* KEY2: 正常调试 */
-	MODE_LINE,       /* KEY3: 循迹模式 */
+	MODE_STATIONARY,
+	MODE_STRAIGHT,
+	MODE_LINE,
 };
 
 /* ---- 菜单状态 ---- */
@@ -231,13 +231,14 @@ static void Menu_Dispatch(u8 key, u8 act)
 		if (act != 1) break;
 		switch (key) {
 		case 1:
-			menu.pid_cat = PIDCAT_SPEED;
-			menu.pid_param = 0;
-			menu.level = MENU_PID_TUNE;
-			OLED_Clear(); menu.dirty = 1;
+			menu.pid_cat = (menu.pid_cat == 0) ? PIDCAT_COUNT - 1 : menu.pid_cat - 1;
+			menu.dirty = 1;
 			break;
 		case 2:
-			menu.pid_cat = PIDCAT_LINE;
+			menu.pid_cat = (menu.pid_cat + 1) % PIDCAT_COUNT;
+			menu.dirty = 1;
+			break;
+		case 3:
 			menu.pid_param = 0;
 			menu.level = MENU_PID_TUNE;
 			OLED_Clear(); menu.dirty = 1;
@@ -369,8 +370,11 @@ static void Render(void)
 	/* ---- PID 类别 ---- */
 	case MENU_PID_CAT:
 		OLED_ShowString(1, 2, " PID  SELECT");
-		OLED_ShowString(2, 1, "1.SPEED PID    ");
-		OLED_ShowString(3, 1, "2.LINE  PID    ");
+		if (menu.pid_cat == PIDCAT_SPEED)
+			OLED_ShowString(2, 1, "> SPEED PID     ");
+		else
+			OLED_ShowString(2, 1, "> LINE  PID     ");
+		OLED_ShowString(3, 1, "1/2:SW 3:ENTER ");
 		OLED_ShowString(4, 1, "   4.BACK      ");
 		break;
 

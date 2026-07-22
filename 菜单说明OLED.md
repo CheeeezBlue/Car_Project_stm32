@@ -49,35 +49,33 @@
 
 ```
   MODE SELECT
->1.IDLE
- 2.MANUAL
+>1.STATIONARY
+ 2.STRAIGHT
  3.LINE
 ```
 
-`>` 标记当前正在运行的模式。
+`>` 标记当前选中的模式。
 
 ### 模式槽位对应的 RunMode_t 枚举值
 
 | 槽位 | 按键 | 模式 | 含义 |
 |------|------|------|------|
-| 1 | KEY1 | IDLE (0) | 停车等待，屏蔽所有速度/转向指令 |
-| 2 | KEY2 | MANUAL (1) | 手动模式，蓝牙串口直控速度 |
-| 3 | KEY3 | LINE (3) | 灰度循迹模式，LineControl PID 接管差速 |
+| 1 | KEY1 | STATIONARY (1) | 静止模式，屏蔽所有速度指令，不可启动 |
+| 2 | KEY2 | STRAIGHT (2) | 直线模式，航向角+角速度串级PID + 速度环 |
+| 3 | KEY3 | LINE (3) | 灰度循迹模式，灰度PID + 速度环 |
 
 ### 按键
 
 | 按键 | 动作 | 底层调用 |
 |------|------|----------|
-| KEY1/2/3 | 切换到对应模式 **并自动返回主菜单** | `RunMode_Set(mode)` → 关闭旧环 → `Car_Stop()` → 开启新环 |
+| KEY1/2/3 | 切换到对应模式 **并自动返回主菜单** | `RunMode_Set(mode)` → `RunMode_Stop()` 停机关环 → 仅选中新模式 |
 | KEY4 | 返回主菜单（不切换模式） | `menu.level = MENU_MAIN` |
 
-### 底层详解：`RunMode_Set(MODE_LINE)` 的执行流程
+### 底层详解：`RunMode_Set(MODE_STRAIGHT)` 的执行流程
 
-1. `Car_SetYawDiff(0.0f)` — 差速清零
-2. `LineControl_Disable()` — 关闭旧 LINE 环（如果之前在 LINE 模式）
-3. `Car_Stop()` — 停止两轮（目标速度清零，编码器脉冲目标清零）
-4. `LineControl_Enable()` — 开启 LINE 环（设置 `enabled=1`）
-5. `current_mode = MODE_LINE`
+1. `RunMode_Stop()` — `Car_Stop()` + 清零 yaw diff + 禁用 LineControl + 禁用 YawControl + `running=0`
+2. `current_mode = MODE_STRAIGHT`
+3. **不会自动启动** — 需 KEY4 启停确认后才调用 `RunMode_Run()` 实际运行
 
 ---
 
@@ -100,7 +98,7 @@ KEY3:enter 4:back
 |------|------|------|
 | SPEED LOOP | 4 页 (0~3) | 速度环实时数据 |
 | GRAYSCALE | 1 页 | 灰度传感器（当前未启用） |
-| YAW ANGLE | 1 页 | MPU6050 偏航角速度（当前未启用） |
+| YAW ANGLE | 1 页 | IMU660RA 航向/角速度数据 |
 | SYSTEM | 1 页 | 系统状态摘要 |
 
 #### 按键
@@ -200,7 +198,7 @@ FLT: 48.5
 
 ```
    SYSTEM
-MODE:LINE
+MODE:STRAIGHT RUN
 UART1/3  OK
     4:BACK
 ```
@@ -208,8 +206,8 @@ UART1/3  OK
 | 行 | 内容 | 数据来源 |
 |----|------|----------|
 | 1 | SYSTEM | 标题 |
-| 2 | MODE:LINE | 当前运行模式名 | `RunMode_GetName(RunMode_Get())` |
-| 3 | UART1/3 OK | 串口状态（固定显示，实际未检测） | — |
+| 2 | MODE:STRAIGHT RUN/STOP | 当前模式 + 运行/停止 | `RunMode_GetName()` + `RunMode_IsRunning()` |
+| 3 | UART1/3 OK | 串口状态（固定显示） | — |
 
 #### 按键
 
@@ -229,17 +227,20 @@ UART1/3  OK
 
 ```
  PID  SELECT
-1.SPEED PID
-2.LINE  PID
+> SPEED PID
+1/2:SW 3:ENTER
    4.BACK
 ```
+
+`>` 指向当前选中类别。KEY1/KEY2 在 SPEED / LINE 之间循环切换。
 
 #### 按键
 
 | 按键 | 动作 |
 |------|------|
-| KEY1 | 进入速度环 PID 调参 |
-| KEY2 | 进入灰度 PID 调参 |
+| KEY1 | 上翻类别（SPEED ↔ LINE） |
+| KEY2 | 下翻类别（SPEED ↔ LINE） |
+| KEY3 | 进入当前类别的 PID 调参 |
 | KEY4 | 返回主菜单 |
 
 ---
@@ -269,11 +270,9 @@ UART1/3  OK
 
 #### 底层详解
 
-- **速度环 PID**：修改 `Car_SetKp/Ki/Kd()`，直接影响 `CarControl_Update()` 中的 PID 计算
-  - 计算公式：`PWM = FFL * target + PID(target, encoder) + diff`
-- **灰度 PID**：修改 `LineControl_SetKp/Ki/Kd()`，影响 `LineControl_Update()` 中的 PID 计算
-  - 计算公式：`diff = Kp * error + Ki * integral(error) + Kd * derivative(error)`
-  - diff 输出限幅：[-40, 40]
+- **速度环 PID**：修改 `CarControl` 的速度 Kp/Ki/Kd，影响 `CarControl_Update()` 中独立左/右轮速度 PID
+- **灰度 PID**：修改 `LineControl` 的 Kp/Ki/Kd，影响 `LineControl_Update()` 中灰度误差→差速的 PID 计算
+- **航向角 PID / 角速度 PID**：不在 OLED 菜单中，通过串口 `YHP/YHI/YHD` 和 `YAWP/YAWI/YAWD` 调试（见 UART 命令速查）
 
 ---
 
@@ -284,21 +283,21 @@ UART1/3  OK
 ```
  RUN  MODE ?
                 
-    LINE
+    STRAIGHT
 4=RUN 1/2/3=STOP
 ```
 
-第 3 行显示当前运行模式名。
+第 3 行显示当前选中的模式名。
 
 ### 按键
 
 | 按键 | 动作 | 底层调用 |
 |------|------|----------|
-| KEY4 | **RUN** — 启动当前模式 | `RunMode_Run()` → 根据当前模式调用 `LineControl_Enable()` 或 `YawControl_Enable()` |
-| KEY1/2/3 | **STOP** — 停车 | `RunMode_Stop()` → `Car_Stop()` + `LineControl_Disable()` + `YawControl_Disable()` |
+| KEY4 | **RUN** — 启动当前模式 | `RunMode_Run()` → 根据当前模式调用 `LineControl_Enable()` 或 `YawControl_Enable()`；STATIONARY 模式下无操作 |
+| KEY1/2/3 | **STOP** — 停车 | `RunMode_Stop()` → `Car_Stop()` + 清零 yaw diff + 禁用 LineControl + 禁用 YawControl |
 | 超时 2 秒 | 自动取消，回主菜单 | — |
 
-> **注意**：`Car_Stop()` 会将左右目标速度清零（`target_L = 0, target_R = 0`），编码器脉冲目标清零，PWM 归零，但不修改 PID 参数。
+> **注意**：`RunMode_Stop()` 将 running 状态清零，停止电机，禁用上层控制器，但不改变已选中的模式。再次 KEY4 确认即可重新启动。
 
 ---
 
@@ -343,15 +342,15 @@ MENU_MAIN (L0)
  │          └─ KEY4 → 回 MAIN
  │
  ├─ KEY3 → MENU_PID_CAT (L1)
- │          ├─ KEY1 → MENU_PID_TUNE (L2) [速度环]
+ │          ├─ KEY1/2 → 循环切换类别（SPEED ↔ LINE）
+ │          ├─ KEY3 → MENU_PID_TUNE (L2)
  │          │          ├─ KEY1/2 → ±step
  │          │          ├─ KEY3 → 切 Kp/Ki/Kd
  │          │          └─ KEY4 → 回 PID_CAT
- │          ├─ KEY2 → MENU_PID_TUNE (L2) [灰度]
  │          └─ KEY4 → 回 MAIN
  │
  └─ KEY4 → MENU_RUN_CONFIRM (L1)
-            ├─ KEY4 → RunMode_Run() → 回 MAIN
+            ├─ KEY4 → RunMode_Run() → 回 MAIN（STATIONARY 模式无操作）
             ├─ KEY1/2/3 → RunMode_Stop() → 回 MAIN
             └─ 超时2s → 回 MAIN
 ```

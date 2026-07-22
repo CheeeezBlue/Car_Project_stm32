@@ -3,31 +3,32 @@
 
 #include "../Driver/fml_types.h"
 
-/* Yaw PID 初始化 */
-void YawControl_Init(void);
+void  YawControl_Init(void);
+void  YawControl_Update(float yaw_rate, float dt);
+void  YawControl_Enable(void);
+void  YawControl_Disable(void);
 
-/* 每控制周期调用：输入当前角速度 → PID → 更新左右轮转速差 */
-void YawControl_Update(float yaw_rate, float dt);
+void  YawControl_SetHeadingKp(float kp);
+void  YawControl_SetHeadingKi(float ki);
+void  YawControl_SetHeadingKd(float kd);
+void  YawControl_SetRateKp(float kp);
+void  YawControl_SetRateKi(float ki);
+void  YawControl_SetRateKd(float kd);
+void  YawControl_SetRateLimit(float max_deg_per_s);
+void  YawControl_SetLimit(float max_diff);
 
-/* ---- 目标/参数设置 ---- */
-void YawControl_SetTarget(float deg_per_s);   /* 目标角速度 (°/s)，+CCW/-CW */
-void YawControl_SetPID(float kp, float ki, float kd);
-void YawControl_SetKp(float kp);
-void YawControl_SetKi(float ki);
-void YawControl_SetKd(float kd);
-void YawControl_SetLimit(float max_diff);     /* 输出差分上限 (pulses/10ms) */
-
-/* ---- 状态查询 ---- */
-float YawControl_GetDiff(void);      /* 转速差: 左=-diff/2, 右=+diff/2 */
-float YawControl_GetTarget(void);    /* 当前目标角速度 */
-float YawControl_GetOutput(void);    /* PID 原始输出 */
-float YawControl_GetLastRate(void);  /* 最近一次角速度 (°/s) */
-float YawControl_GetKp(void);
-float YawControl_GetKi(void);
-float YawControl_GetKd(void);
+float YawControl_GetDiff(void);
+float YawControl_GetHeading(void);
+float YawControl_GetHeadingTarget(void);
+float YawControl_GetRateTarget(void);
+float YawControl_GetLastRate(void);
+float YawControl_GetHeadingKp(void);
+float YawControl_GetHeadingKi(void);
+float YawControl_GetHeadingKd(void);
+float YawControl_GetRateKp(void);
+float YawControl_GetRateKi(void);
+float YawControl_GetRateKd(void);
+float YawControl_GetRateLimit(void);
 u8    YawControl_IsEnabled(void);
-
-void YawControl_Enable(void);
-void YawControl_Disable(void);
 
 #endif

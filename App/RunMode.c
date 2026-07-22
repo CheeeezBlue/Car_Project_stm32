@@ -3,68 +3,34 @@
 #include "LineControl.h"
 #include "YawControl.h"
 
-static RunMode_t current_mode = MODE_IDLE;
+static RunMode_t current_mode = MODE_STATIONARY;
+static u8 running;
 
-static const char* mode_names[] = {
-	"IDLE",
-	"MANUAL",
+static const char* const mode_names[MODE_COUNT] = {
+	"INVALID",
+	"STATIONARY",
 	"STRAIGHT",
 	"LINE",
 };
 
-/* ================================================================
-   初始化
-   ================================================================ */
 void RunMode_Init(void)
 {
-	current_mode = MODE_IDLE;
+	current_mode = MODE_STATIONARY;
+	running = 0;
 }
 
-/* ================================================================
-   每10ms调用：速度闭环
-   ================================================================ */
 void RunMode_Update(void)
 {
 	CarControl_Update();
 }
 
-/* ================================================================
-   模式切换：自动关闭旧模式环，开启新模式环
-   ================================================================ */
-void RunMode_Set(RunMode_t mode)
+u8 RunMode_Set(RunMode_t mode)
 {
-	if (mode >= MODE_COUNT) return;
-	if (mode == current_mode) return;
+	if (mode < MODE_STATIONARY || mode >= MODE_COUNT) return 0;
 
-	/* 关闭旧模式环 */
-	switch (current_mode) {
-	case MODE_STRAIGHT:
-		YawControl_Disable();
-		Car_SetYawDiff(0.0f);
-		break;
-	case MODE_LINE:
-		LineControl_Disable();
-		break;
-	default:
-		Car_SetYawDiff(0.0f);
-		break;
-	}
-
-	Car_Stop();
-
-	/* 开启新模式环 */
-	switch (mode) {
-	case MODE_STRAIGHT:
-		YawControl_Enable();
-		break;
-	case MODE_LINE:
-		LineControl_Enable();
-		break;
-	default:
-		break;
-	}
-
+	RunMode_Stop();
 	current_mode = mode;
+	return 1;
 }
 
 RunMode_t RunMode_Get(void)
@@ -74,30 +40,32 @@ RunMode_t RunMode_Get(void)
 
 const char* RunMode_GetName(RunMode_t mode)
 {
-	if (mode >= MODE_COUNT) return "???";
+	if (mode < MODE_STATIONARY || mode >= MODE_COUNT) return "???";
 	return mode_names[mode];
 }
 
-/* ================================================================
-   一键启停（菜单调用）
-   ================================================================ */
 void RunMode_Run(void)
 {
-	switch (current_mode) {
-	case MODE_LINE:
+	if (current_mode == MODE_STATIONARY) return;
+
+	Car_SetYawDiff(0.0f);
+	if (current_mode == MODE_LINE)
 		LineControl_Enable();
-		break;
-	case MODE_STRAIGHT:
+	else if (current_mode == MODE_STRAIGHT)
 		YawControl_Enable();
-		break;
-	default:
-		break;
-	}
+	running = 1;
 }
 
 void RunMode_Stop(void)
 {
+	running = 0;
 	Car_Stop();
+	Car_SetYawDiff(0.0f);
 	LineControl_Disable();
 	YawControl_Disable();
+}
+
+u8 RunMode_IsRunning(void)
+{
+	return running;
 }

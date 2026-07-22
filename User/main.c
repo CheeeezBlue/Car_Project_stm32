@@ -45,30 +45,19 @@ int main(void)
 
 	while (1) {
 		char line[UART_LINE_SIZE];
-		if (UART_GetLine(UART_ID_1, line, sizeof(line))) {
-			Command_Handle(line);
-		}
-		if (UART_GetLine(UART_ID_3, line, sizeof(line))) {
-			Command_Handle(line);
-		}
+		if (UART_GetLine(UART_ID_1, line, sizeof(line))) Command_Handle(line);
+		if (UART_GetLine(UART_ID_3, line, sizeof(line))) Command_Handle(line);
 
-		u16 gray[GRAY_CHANNELS];
-		Grayscale_ReadAll(gray);
-		IMU660RA_Update();
-		float yaw_rate = IMU660RA_ReadGyroZ();
-
-		switch (RunMode_Get()) {
-		case MODE_IDLE:
-		case MODE_MANUAL:
-			Car_SetYawDiff(0.0f);
-			break;
-		case MODE_STRAIGHT:
-			YawControl_Update(yaw_rate, 0.01f);
+		if (RunMode_Get() == MODE_STRAIGHT && RunMode_IsRunning()) {
+			IMU660RA_Update();
+			YawControl_Update(IMU660RA_ReadGyroZ(), 0.01f);
 			Car_SetYawDiff(YawControl_GetDiff());
-			break;
-		case MODE_LINE:
+		} else if (RunMode_Get() == MODE_LINE && RunMode_IsRunning()) {
+			u16 gray[GRAY_CHANNELS];
+			Grayscale_ReadAll(gray);
 			LineControl_Update(gray);
-			break;
+		} else {
+			Car_SetYawDiff(0.0f);
 		}
 
 		RunMode_Update();
@@ -77,10 +66,9 @@ int main(void)
 		if (++v_tick >= 5) {
 			v_tick = 0;
 			UART_Printf("%.0f,%.0f,%.1f,%.1f,%.2f,%.1f\r\n",
-			            Car_GetTarget(0), Car_GetTarget(1),
-			            Car_GetFiltSpeed(0), Car_GetFiltSpeed(1),
-			            LineControl_GetError(),
-			            LineControl_GetOutput());
+							Car_GetTarget(0), Car_GetTarget(1),
+							Car_GetFiltSpeed(0), Car_GetFiltSpeed(1),
+							YawControl_GetHeading(), YawControl_GetDiff());
 		}
 
 		Delay_ms(10);

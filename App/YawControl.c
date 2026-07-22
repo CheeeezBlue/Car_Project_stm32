@@ -1,93 +1,113 @@
 #include "YawControl.h"
 #include "../Driver/PID.h"
 
-/* ---- Yaw 状态 ---- */
-static PID_t  yaw_pid;
-static float  yaw_target;       /* 目标角速度 (°/s) */
-static float  yaw_diff;         /* 当前转速差 (pulses/10ms) */
-static float  yaw_raw_out;      /* PID 原始输出 (调试用) */
-static float  yaw_filt_rate;    /* IIR 低通滤波后的角速度 (°/s) */
-#define YAW_FILT_ALPHA  0.15f   /* IIR 系数，越小滤波越强 */
-static u8     yaw_enabled;
+#define YAW_FILT_ALPHA  0.15f
 
-/* ================================================================
-   初始化
-   ================================================================ */
+static PID_t heading_pid;
+static PID_t rate_pid;
+static float heading_deg;
+static float heading_target;
+static float rate_target;
+static float yaw_diff;
+static float filt_rate;
+static float rate_limit;
+static u8 yaw_enabled;
+static u8 rate_ready;
+
 void YawControl_Init(void)
 {
-	/* 保守初值: Kp=0.0, Ki=0.0, Kd=0.0, 输出限幅 ±40 */
-	PID_Init(&yaw_pid, 0.7f, 0.005f, 0.01f, -40.0f, 40.0f);
-	yaw_target    = 0.0f;
-	yaw_diff      = 0.0f;
-	yaw_raw_out   = 0.0f;
-	yaw_filt_rate = 0.0f;
-	yaw_enabled   = 0;
+	PID_Init(&heading_pid, 1.0f, 0.0f, 0.0f, -45.0f, 45.0f);
+	PID_Init(&rate_pid, 0.7f, 0.005f, 0.01f, -40.0f, 40.0f);
+	heading_deg = 0.0f;
+	heading_target = 0.0f;
+	rate_target = 0.0f;
+	yaw_diff = 0.0f;
+	filt_rate = 0.0f;
+	rate_limit = 45.0f;
+	yaw_enabled = 0;
+	rate_ready = 0;
 }
 
-/* ================================================================
-   核心：每控制周期调用
-   ================================================================ */
 void YawControl_Update(float yaw_rate, float dt)
 {
 	if (!yaw_enabled) {
-		yaw_diff    = 0.0f;
-		yaw_raw_out = 0.0f;
-		PID_Reset(&yaw_pid);
+		yaw_diff = 0.0f;
 		return;
 	}
 
-	yaw_filt_rate += YAW_FILT_ALPHA * (yaw_rate - yaw_filt_rate);
-	yaw_raw_out   = PID_Compute(&yaw_pid, yaw_target, yaw_filt_rate, dt);
-	yaw_diff      = yaw_raw_out;
-}
-
-/* ================================================================
-   命令接口
-   ================================================================ */
-void YawControl_SetTarget(float deg_per_s)
-{
-	yaw_target = deg_per_s;
-}
-
-void YawControl_SetPID(float kp, float ki, float kd)
-{
-	yaw_pid.Kp = kp;
-	yaw_pid.Ki = ki;
-	yaw_pid.Kd = kd;
-}
-
-void YawControl_SetKp(float kp) { yaw_pid.Kp = kp; }
-void YawControl_SetKi(float ki) { yaw_pid.Ki = ki; }
-void YawControl_SetKd(float kd) { yaw_pid.Kd = kd; }
-
-void YawControl_SetLimit(float max_diff)
-{
-	yaw_pid.out_max =  max_diff;
-	yaw_pid.out_min = -max_diff;
-	yaw_pid.integral_max = max_diff;
+	if (!rate_ready) {
+		filt_rate = yaw_rate;
+		rate_ready = 1;
+	} else {
+		filt_rate += YAW_FILT_ALPHA * (yaw_rate - filt_rate);
+	}
+	heading_deg += filt_rate * dt;
+	rate_target = PID_Compute(&heading_pid, heading_target, heading_deg, dt);
+	if (rate_target > rate_limit) rate_target = rate_limit;
+	if (rate_target < -rate_limit) rate_target = -rate_limit;
+	yaw_diff = PID_Compute(&rate_pid, rate_target, filt_rate, dt);
 }
 
 void YawControl_Enable(void)
 {
-	PID_Reset(&yaw_pid);
+	PID_Reset(&heading_pid);
+	PID_Reset(&rate_pid);
+	heading_deg = 0.0f;
+	heading_target = 0.0f;
+	rate_target = 0.0f;
+	yaw_diff = 0.0f;
+	filt_rate = 0.0f;
+	rate_ready = 0;
 	yaw_enabled = 1;
 }
 
 void YawControl_Disable(void)
 {
 	yaw_enabled = 0;
-	yaw_diff    = 0.0f;
-	PID_Reset(&yaw_pid);
+	heading_deg = 0.0f;
+	heading_target = 0.0f;
+	rate_target = 0.0f;
+	yaw_diff = 0.0f;
+	filt_rate = 0.0f;
+	rate_ready = 0;
+	PID_Reset(&heading_pid);
+	PID_Reset(&rate_pid);
 }
 
-/* ================================================================
-   状态查询
-   ================================================================ */
-float YawControl_GetDiff(void)      { return yaw_diff; }
-float YawControl_GetTarget(void)    { return yaw_target; }
-float YawControl_GetOutput(void)    { return yaw_raw_out; }
-float YawControl_GetLastRate(void)  { return yaw_filt_rate; }
-float YawControl_GetKp(void)        { return yaw_pid.Kp; }
-float YawControl_GetKi(void)        { return yaw_pid.Ki; }
-float YawControl_GetKd(void)        { return yaw_pid.Kd; }
-u8    YawControl_IsEnabled(void)    { return yaw_enabled; }
+void YawControl_SetHeadingKp(float kp) { heading_pid.Kp = kp; }
+void YawControl_SetHeadingKi(float ki) { heading_pid.Ki = ki; }
+void YawControl_SetHeadingKd(float kd) { heading_pid.Kd = kd; }
+void YawControl_SetRateKp(float kp) { rate_pid.Kp = kp; }
+void YawControl_SetRateKi(float ki) { rate_pid.Ki = ki; }
+void YawControl_SetRateKd(float kd) { rate_pid.Kd = kd; }
+
+void YawControl_SetRateLimit(float max_deg_per_s)
+{
+	if (max_deg_per_s < 0.0f) max_deg_per_s = -max_deg_per_s;
+	rate_limit = max_deg_per_s;
+	heading_pid.out_max = max_deg_per_s;
+	heading_pid.out_min = -max_deg_per_s;
+	heading_pid.integral_max = max_deg_per_s;
+}
+
+void YawControl_SetLimit(float max_diff)
+{
+	if (max_diff < 0.0f) max_diff = -max_diff;
+	rate_pid.out_max = max_diff;
+	rate_pid.out_min = -max_diff;
+	rate_pid.integral_max = max_diff;
+}
+
+float YawControl_GetDiff(void) { return yaw_diff; }
+float YawControl_GetHeading(void) { return heading_deg; }
+float YawControl_GetHeadingTarget(void) { return heading_target; }
+float YawControl_GetRateTarget(void) { return rate_target; }
+float YawControl_GetLastRate(void) { return filt_rate; }
+float YawControl_GetHeadingKp(void) { return heading_pid.Kp; }
+float YawControl_GetHeadingKi(void) { return heading_pid.Ki; }
+float YawControl_GetHeadingKd(void) { return heading_pid.Kd; }
+float YawControl_GetRateKp(void) { return rate_pid.Kp; }
+float YawControl_GetRateKi(void) { return rate_pid.Ki; }
+float YawControl_GetRateKd(void) { return rate_pid.Kd; }
+float YawControl_GetRateLimit(void) { return rate_limit; }
+u8 YawControl_IsEnabled(void) { return yaw_enabled; }

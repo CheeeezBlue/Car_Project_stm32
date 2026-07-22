@@ -26,6 +26,7 @@ typedef enum {
 /* PID 类别索引 */
 #define PIDCAT_SPEED  0
 #define PIDCAT_LINE   1
+#define PIDCAT_COUNT  2
 
 /* 调参步长 */
 #define PID_STEP_FINE    0.010f
